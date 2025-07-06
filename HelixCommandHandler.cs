@@ -6,6 +6,9 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
+using Microsoft.VisualStudio.Text.UI;
+using Microsoft.VisualStudio.Text.Editor.Commanding;
+
 
 namespace VsHelix
 {
@@ -13,19 +16,20 @@ namespace VsHelix
     [ContentType("text")]
     [Name(nameof(HelixCommandHandler))]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
-    internal sealed class HelixCommandHandler : ICommandHandler<TypeCharCommandArgs>
+	[Order(Before = "TypeChar")]  // equivalent to PredefinedCommandHandlerNames.TypeChar
+	internal sealed class HelixCommandHandler : ICommandHandler<TypeCharCommandArgs>
     {
-        private readonly IMultiSelectionBroker _selectionBroker;
-        private readonly IEditorOperationsFactoryService _operationsFactory;
+        //private readonly IMultiSelectionBroker _selectionBroker;
+        //private readonly IEditorOperationsFactoryService _operationsFactory;
 
-        [ImportingConstructor]
-        public HelixCommandHandler(
-            IMultiSelectionBroker selectionBroker,
-            IEditorOperationsFactoryService operationsFactory)
-        {
-            _selectionBroker = selectionBroker ?? throw new ArgumentNullException(nameof(selectionBroker));
-            _operationsFactory = operationsFactory ?? throw new ArgumentNullException(nameof(operationsFactory));
-        }
+        //[ImportingConstructor]
+        //public HelixCommandHandler(
+        //    IMultiSelectionBroker selectionBroker,
+        //    IEditorOperationsFactoryService operationsFactory)
+        //{
+        //    _selectionBroker = selectionBroker ?? throw new ArgumentNullException(nameof(selectionBroker));
+        //    _operationsFactory = operationsFactory ?? throw new ArgumentNullException(nameof(operationsFactory));
+        //}
 
         public string DisplayName => "Helix Basic Motion";
 
@@ -34,26 +38,40 @@ namespace VsHelix
             return CommandState.Available;
         }
 
-        public bool ExecuteCommand(TypeCharCommandArgs args, CommandExecutionContext executionContext)
-        {
-            if (args.TypedChar != 'w')
-            {
-                return false;
-            }
+		public bool ExecuteCommand(TypeCharCommandArgs args, CommandExecutionContext _)
+		{
+			if (args.TypedChar != 'w')
+				return false;               // let other handlers run
 
-            var view = args.TextView;
-            var operations = _operationsFactory.GetEditorOperations(view);
+			var view = (IWpfTextView)args.TextView;
+			var broker = view.GetMultiSelectionBroker();   // <— per-view broker
 
-            using (_selectionBroker.BeginBatchOperation())
-            {
-                foreach (var selection in _selectionBroker.AllSelections)
-                {
-                    view.Caret.MoveTo(selection.End);
-                    operations.MoveToNextWord(false);
-                }
-            }
+			broker.PerformActionOnAllSelections(
+				PredefinedSelectionTransformations.SelectToNextWord);
 
-            return true;
-        }
-    }
+			return true;                    // we handled the key
+		}
+
+		//public bool ExecuteCommand(TypeCharCommandArgs args, CommandExecutionContext executionContext)
+		//{
+		//    if (args.TypedChar != 'w')
+		//    {
+		//        return false;
+		//    }
+
+		//    var view = args.TextView;
+		//    var operations = _operationsFactory.GetEditorOperations(view);
+
+		//    using (_selectionBroker.BeginBatchOperation())
+		//    {
+		//        foreach (var selection in _selectionBroker.AllSelections)
+		//        {
+		//            view.Caret.MoveTo(selection.End);
+		//            operations.MoveToNextWord(false);
+		//        }
+		//    }
+
+		//    return true;
+		//}
+	}
 }
