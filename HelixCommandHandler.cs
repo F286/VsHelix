@@ -1,9 +1,11 @@
 using System;
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Commanding;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 
 namespace VsHelix
 {
@@ -42,12 +44,12 @@ namespace VsHelix
             var view = args.TextView;
             var operations = _operationsFactory.GetEditorOperations(view);
 
-            using (_selectionBroker.BeginBulkOperation())
+            using (_selectionBroker.BeginBatchOperation())
             {
                 foreach (var selection in _selectionBroker.AllSelections)
                 {
                     view.Caret.MoveTo(selection.End);
-                    operations.ExtendToNextWord();
+                    operations.MoveToNextWord(false);
                 }
             }
 
