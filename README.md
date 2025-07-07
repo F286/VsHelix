@@ -16,10 +16,16 @@ basic commands inspired by Helix.
    extension automatically loaded.
 6. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-7. With the extension loaded you can use the following keys:
-   - `w` – extend each caret to the start of the next word.
+7. The extension provides a simple **Normal** and **Insert** mode.  Insert mode is active by default.
+8. With the extension loaded you can use the following keys while in **Normal** mode:
+   - `w` – move each caret to the start of the next word clearing any selection.
    - `d` – delete the text in all active selections.
    - `c` – change the selections (delete then place the carets for insertion).
+   - `i` – enter **Insert** mode.
+   - `Esc` – return to **Normal** mode.
+
+Internally, each mode has its own handler class (`InsertMode` and `NormalMode`)
+which the command handler invokes based on the current mode.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
