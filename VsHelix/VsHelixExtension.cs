@@ -3,8 +3,15 @@ using System;
 
 namespace VsHelix
 {
-    // Main entry point for Visual Studio Extensibility SDK
-    public sealed class VsHelixExtension : Extension
+/*	[VisualStudioContribution]
+	internal class MockEntrypoint : Extension
+	{
+		public override ExtensionConfiguration ExtensionConfiguration => null;
+	}*/
+
+	// Main entry point for Visual Studio Extensibility SDK
+	[VisualStudioContribution]
+	public sealed class VsHelixExtension : Microsoft.VisualStudio.Extensibility.Extension
     {
         public override ExtensionConfiguration ExtensionConfiguration => new()
         {

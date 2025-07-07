@@ -1,4 +1,4 @@
-using System.ComponentModel.Composition;
+/*using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -64,3 +64,4 @@ namespace VsHelix
                 }
         }
 }
+*/
