@@ -10,11 +10,13 @@ skeleton code but will grow into a small set of core commands.
 1. Install **Visual Studio 2022** with the *Visual Studio extension development*
    workload.
 2. Open `VsHelix.sln` in Visual Studio.
-3. Press **F5** to launch an Experimental Instance of Visual Studio with the
+3. In the solution explorer, set the startup to the 'VsHelix' solution.
+4. In *Common Properties/Configure Startup Projects* set *Mutiple Startup Projects* then launch VsHelix.
+5. Press **F5** to launch an Experimental Instance of Visual Studio with the
    extension automatically loaded.
-4. Open any text file in the experimental instance.  Use
+6. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-5. Once the command handler is implemented you will be able to press `w` to
+7. Once the command handler is implemented you will be able to press `w` to
    extend each caret to the start of the next word.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
