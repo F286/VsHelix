@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Linq;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -58,13 +60,16 @@ namespace VsHelix
                         switch (args.TypedChar)
                         {
                                 case 'w':
-                                        broker.PerformActionOnAllSelections(() => ops.MoveToNextWord(true));
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                            ops.MoveToNextWord(true);
+                                        });
                                         return true;
 
                                 case 'd':
                                         using (var edit = view.TextBuffer.CreateEdit())
                                         {
-                                                broker.PerformActionOnAllSelections(() =>
+                                                broker.PerformActionOnAllSelections(selection =>
                                                 {
                                                         if (!view.Selection.IsEmpty)
                                                                 edit.Delete(view.Selection.StreamSelectionSpan.SnapshotSpan);
@@ -72,14 +77,14 @@ namespace VsHelix
                                                 edit.Apply();
                                         }
 
-                                        broker.PerformActionOnAllSelections(() => view.Selection.Clear());
+                                        broker.PerformActionOnAllSelections(selection => view.Selection.Clear());
                                         return true;
 
                                 case 'c':
                                         var starts = new List<SnapshotPoint>();
                                         using (var edit = view.TextBuffer.CreateEdit())
                                         {
-                                                broker.PerformActionOnAllSelections(() =>
+                                                broker.PerformActionOnAllSelections(selection =>
                                                 {
                                                         if (!view.Selection.IsEmpty)
                                                         {
@@ -94,12 +99,18 @@ namespace VsHelix
                                                 edit.Apply();
                                         }
 
+                                        var currentSnapshot = view.TextBuffer.CurrentSnapshot;
+                                        starts = starts.Select(point => point.TranslateTo(currentSnapshot, PointTrackingMode.Positive)).ToList();
+
                                         broker.ClearSecondarySelections();
                                         if (starts.Count > 0)
                                         {
                                                 view.Caret.MoveTo(starts[0]);
                                                 for (var i = 1; i < starts.Count; i++)
-                                                        broker.AddSelection(new SnapshotSpan(starts[i], 0));
+                                                        broker.AddSelection(new Microsoft.VisualStudio.Text.Selection(
+                                                                new VirtualSnapshotPoint(starts[i]),
+                                                                new VirtualSnapshotPoint(starts[i])
+                                                        ));
                                         }
                                         return true;
                         }
