@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Include href="KnownImageIds.vsct"/>
+  <Include href="VSGlobals.vsct"/>
+
+  <Commands package="VsHelix">
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="VsHelix" value="{d8c5a252-a96b-42ce-81c6-b57e22382eb6}">
+      
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>
