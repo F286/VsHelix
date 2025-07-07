@@ -10,7 +10,7 @@ namespace VsHelix
     /// <summary>
     /// Handles key input when in Normal mode.
     /// </summary>
-    internal sealed class NormalMode : IMode
+    internal sealed class NormalMode : IInputMode
     {
         public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, out HelixMode nextMode)
         {
@@ -79,7 +79,7 @@ namespace VsHelix
                     nextMode = HelixMode.Insert;
                     return true;
 
-                case 0x1b:
+                case (char)0x1b:
                     return true;
             }
 

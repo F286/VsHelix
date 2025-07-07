@@ -19,8 +19,8 @@ namespace VsHelix
                 private const string ModeKey = nameof(HelixCommandHandler) + "_mode";
 
                 private readonly IEditorOperationsFactoryService _editorOperationsFactory;
-                private readonly IMode _insertMode = new InsertMode();
-                private readonly IMode _normalMode = new NormalMode();
+                private readonly IInputMode _insertMode = new InsertMode();
+                private readonly IInputMode _normalMode = new NormalMode();
 
                 [ImportingConstructor]
                 internal HelixCommandHandler(IEditorOperationsFactoryService editorOperationsFactory)
@@ -53,7 +53,7 @@ namespace VsHelix
                         var ops = _editorOperationsFactory.GetEditorOperations(view);
 
                         var mode = GetMode(view);
-                        IMode handler = mode == HelixMode.Insert ? _insertMode : _normalMode;
+                        IInputMode handler = mode == HelixMode.Insert ? _insertMode : _normalMode;
                         if (handler.Handle(args, view, broker, ops, out HelixMode next))
                         {
                                 SetMode(view, next);
