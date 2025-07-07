@@ -2,8 +2,8 @@
 
 VsHelix is a minimal Visual Studio extension that explores a Helix/Kakoune style
 "selection first" editing workflow.  It uses Visual Studio's built in multi
-cursor functionality as the state store.  The project currently contains only
-skeleton code but will grow into a small set of core commands.
+cursor functionality as the state store.  The project currently implements a few
+basic commands inspired by Helix.
 
 ## Building and Running
 
@@ -16,8 +16,10 @@ skeleton code but will grow into a small set of core commands.
    extension automatically loaded.
 6. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-7. Once the command handler is implemented you will be able to press `w` to
-   extend each caret to the start of the next word.
+7. With the extension loaded you can use the following keys:
+   - `w` – extend each caret to the start of the next word.
+   - `d` – delete the text in all active selections.
+   - `c` – change the selections (delete then place the carets for insertion).
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
@@ -37,6 +39,6 @@ or using `VSIXInstaller.exe`.
 - `VsHelix.csproj` – Project definition and SDK references.
 - `source.extension.vsixmanifest` – Extension manifest used by Visual Studio.
 
-This repository currently does not include the command handler.  Future commits
-will add a `HelixCommandHandler` class implementing the initial `w` command and
-other basic functionality.
+The core logic lives in `HelixCommandHandler.cs` which intercepts typed
+characters and manipulates the current selections via
+`IMultiSelectionBroker`.
