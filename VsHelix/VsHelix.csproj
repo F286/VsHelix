@@ -48,6 +48,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="HelixCommandHandler.cs" />
+    <Compile Include="HelixMode.cs" />
+    <Compile Include="IMode.cs" />
+    <Compile Include="InsertMode.cs" />
+    <Compile Include="NormalMode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VsHelixPackage.cs" />
     <Compile Include="source.extension.cs">
