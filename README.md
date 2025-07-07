@@ -10,11 +10,13 @@ basic commands inspired by Helix.
 1. Install **Visual Studio 2022** with the *Visual Studio extension development*
    workload.
 2. Open `VsHelix.sln` in Visual Studio.
-3. Press **F5** to launch an Experimental Instance of Visual Studio with the
+3. In the solution explorer, set the startup to the 'VsHelix' solution.
+4. In *Common Properties/Configure Startup Projects* set *Mutiple Startup Projects* then launch VsHelix.
+5. Press **F5** to launch an Experimental Instance of Visual Studio with the
    extension automatically loaded.
-4. Open any text file in the experimental instance.  Use
+6. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-5. With the extension loaded you can use the following keys:
+7. With the extension loaded you can use the following keys:
    - `w` – extend each caret to the start of the next word.
    - `d` – delete the text in all active selections.
    - `c` – change the selections (delete then place the carets for insertion).
