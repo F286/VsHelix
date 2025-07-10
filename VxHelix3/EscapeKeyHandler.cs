@@ -15,14 +15,6 @@ namespace VxHelix3
 	[VisualStudioContribution]
 	internal sealed class EscapeKeyHandler : ICommandHandler<EscapeKeyCommandArgs>
 	{
-		private readonly ModeService _modeService;
-
-		//[ImportingConstructor]
-		//internal EscapeKeyHandler(ModeService modeService)
-		//{
-		//	_modeService = modeService;
-		//}
-
 		public string DisplayName => "Helix Escape Handler";
 
 		public CommandState GetCommandState(EscapeKeyCommandArgs args)
@@ -30,9 +22,8 @@ namespace VxHelix3
 
 		public bool ExecuteCommand(EscapeKeyCommandArgs args, CommandExecutionContext context)
 		{
-			//_modeService.EnterNormal();
+			ModeManager.Instance.EnterNormal();
 			return false;
 		}
-		//=> _modeService.HandleEscape(args.TextView);
 	}
 }

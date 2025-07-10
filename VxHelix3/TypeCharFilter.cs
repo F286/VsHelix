@@ -24,7 +24,7 @@ namespace VxHelix3
 		private const string ModeKey = nameof(TypeCharFilter) + "_mode";
 
 		private readonly IEditorOperationsFactoryService _editorOperationsFactory;
-		//private readonly IInputMode _insertMode = new InsertMode();
+		private readonly IInputMode _insertMode = new InsertMode();
 		private readonly IInputMode _normalMode = new NormalMode();
 
 		[ImportingConstructor]
@@ -32,19 +32,6 @@ namespace VxHelix3
 		{
 			_editorOperationsFactory = editorOperationsFactory;
 		}
-
-		private static HelixMode GetMode(ITextView view)
-		{
-			if (!view.Properties.TryGetProperty(ModeKey, out HelixMode mode))
-			{
-				mode = HelixMode.Insert;
-				view.Properties[ModeKey] = mode;
-			}
-			return mode;
-		}
-
-		private static void SetMode(ITextView view, HelixMode mode)
-				=> view.Properties[ModeKey] = mode;
 
 		public string DisplayName => "Helix Emulation (demo)";
 
@@ -56,14 +43,14 @@ namespace VxHelix3
 			var view = args.TextView;
 			var broker = view.GetMultiSelectionBroker();
 			var ops = _editorOperationsFactory.GetEditorOperations(view);
-
-			var mode = GetMode(view);
-			IInputMode handler = _normalMode;
-			//IInputMode handler = mode == HelixMode.Insert ? _insertMode : _normalMode;
-			if (handler.Handle(args, view, broker, ops, out HelixMode next))
+			
+			if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
 			{
-				SetMode(view, next);
-				return true;
+				return _normalMode.Handle(args, view, broker, ops);
+			}
+			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+			{
+				return _insertMode.Handle(args, view, broker, ops);
 			}
 
 			return false;

@@ -19,9 +19,6 @@ namespace VxHelix3
         protected override void InitializeServices(IServiceCollection serviceCollection)
         {
             base.InitializeServices(serviceCollection);
-
-			// You can configure dependency injection here by adding services to the serviceCollection.
-			serviceCollection.AddSingleton<ModeService>();  // we’ll create this next
 		}
     }
 }

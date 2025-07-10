@@ -13,13 +13,13 @@ namespace VxHelix3
 	/// </summary>
 	internal sealed class NormalMode : IInputMode
 	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, out HelixMode nextMode)
+		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 		{
-			nextMode = HelixMode.Normal;
+			//nextMode = HelixMode.Normal;
 			switch (args.TypedChar)
 			{
 				case 'i':
-					nextMode = HelixMode.Insert;
+					ModeManager.Instance.EnterInsert();
 					return true;
 
 				case 'w':
@@ -87,7 +87,7 @@ namespace VxHelix3
 								new VirtualSnapshotPoint(starts[i])
 							));
 					}
-					nextMode = HelixMode.Insert;
+					ModeManager.Instance.EnterInsert();
 					return true;
 
 				case (char)0x1b:

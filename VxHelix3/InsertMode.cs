@@ -11,15 +11,8 @@ namespace VxHelix3
 	/// </summary>
 	internal sealed class InsertMode : IInputMode
 	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, out HelixMode nextMode)
+		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 		{
-			nextMode = HelixMode.Insert;
-			if (args.TypedChar == 0x1b) // Esc
-			{
-				nextMode = HelixMode.Normal;
-				return true;
-			}
-
 			return false;
 		}
 	}

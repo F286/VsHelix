@@ -11,6 +11,6 @@ namespace VxHelix3
 	/// </summary>
 	internal interface IInputMode
 	{
-		bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, out HelixMode nextMode);
+		bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
 	}
 }
