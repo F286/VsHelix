@@ -15,10 +15,23 @@ namespace VxHelix3
 	{
 		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 		{
-			//nextMode = HelixMode.Normal;
 			switch (args.TypedChar)
 			{
 				case 'i':
+					broker.PerformActionOnAllSelections(_ =>
+					{
+						view.Selection.Clear();
+					});
+					ModeManager.Instance.EnterInsert();
+					return true;
+
+				case 'a':
+					broker.PerformActionOnAllSelections(_ =>
+					{
+						if (!view.Selection.IsEmpty)
+							view.Caret.MoveTo(view.Selection.End);
+						view.Selection.Clear();
+					});
 					ModeManager.Instance.EnterInsert();
 					return true;
 
