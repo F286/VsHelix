@@ -16,11 +16,6 @@ namespace VxHelix3
 	{
 		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 		{
-			if (SelectionManager.Instance.HasSavedSelections)
-			{
-				SelectionManager.Instance.RestoreSelections(broker);
-			}
-
 			switch (args.TypedChar)
 			{
 				case 'i':
