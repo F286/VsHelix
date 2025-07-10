@@ -15,6 +15,7 @@ command handler and will grow into a small set of core commands.
 4. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
 5. Press `w` to extend each caret to the start of the next word.
+6. Press `i` to enter insert mode. Use `Esc` to return to normal mode.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
