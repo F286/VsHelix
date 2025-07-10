@@ -16,9 +16,17 @@ namespace VxHelix3
 	{
 		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 		{
+			if (SelectionManager.Instance.HasSavedSelections)
+			{
+				SelectionManager.Instance.RestoreSelections(broker);
+			}
+
 			switch (args.TypedChar)
 			{
 				case 'i':
+					// Save the current selections before entering insert mode.
+					SelectionManager.Instance.SaveSelections(broker);
+
 					// For the 'insert' command, we move the caret to the start of each selection.
 					broker.PerformActionOnAllSelections(selection =>
 					{
@@ -30,6 +38,9 @@ namespace VxHelix3
 					return true;
 
 				case 'a':
+					// Save the current selections before entering insert mode.
+					SelectionManager.Instance.SaveSelections(broker);
+
 					broker.PerformActionOnAllSelections(selection =>
 					{
 						// For the 'append' command, we determine the target position for each caret.

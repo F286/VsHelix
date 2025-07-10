@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.Composition;
+using System.Windows.Controls;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Extensibility;
 using Microsoft.VisualStudio.Text.Editor;
