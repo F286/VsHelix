@@ -16,11 +16,9 @@ namespace VxHelix3
 
 		public TrackedSelection(Selection selection, ITextSnapshot snapshot)
 		{
-			// Negative affinity keeps the point before an insertion, which is typical for an anchor.
-			AnchorPoint = snapshot.CreateTrackingPoint(selection.AnchorPoint.Position, PointTrackingMode.Negative);
-			// Positive affinity keeps the point after an insertion, typical for the active/moving end.
-			ActivePoint = snapshot.CreateTrackingPoint(selection.ActivePoint.Position, PointTrackingMode.Positive);
-			IsReversed = selection.IsReversed;
+			AnchorPoint = snapshot.CreateTrackingPoint(selection.Start.Position, PointTrackingMode.Positive);
+			ActivePoint = snapshot.CreateTrackingPoint(selection.End.Position, PointTrackingMode.Positive);
+			//IsReversed = selection.IsReversed;
 		}
 	}
 
