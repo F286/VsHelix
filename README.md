@@ -27,6 +27,7 @@ or using `VSIXInstaller.exe`.
 - Use Visual Studio's `IMultiSelectionBroker` API to track selections and
   perform transformations.
 - Keep the code base small and easy to extend.
+- Visual Studio's status bar now shows the active editing mode.
 
 ## Repository Layout
 
