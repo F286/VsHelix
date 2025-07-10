@@ -119,37 +119,26 @@ namespace VxHelix3
 					return true;
 
 				case 'c':
-					var starts = new List<SnapshotPoint>();
+					// Create a single edit to group all deletions into one undo transaction.
 					using (var edit = view.TextBuffer.CreateEdit())
 					{
-						broker.PerformActionOnAllSelections(_ =>
+						// Iterate over each selection managed by the broker.
+						broker.PerformActionOnAllSelections(transformer =>
 						{
-							if (!view.Selection.IsEmpty)
+							var currentSelection = transformer.Selection;
+
+							if (!currentSelection.IsEmpty)
 							{
-								starts.Add(view.Selection.Start.Position);
-								edit.Delete(view.Selection.StreamSelectionSpan.SnapshotSpan);
-							}
-							else
-							{
-								starts.Add(view.Caret.Position.BufferPosition);
+								// Create a new SnapshotSpan from the selection's start and end points.
+								var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
+								edit.Delete(spanToDelete);
 							}
 						});
+						// Apply all queued deletions to the buffer.
 						edit.Apply();
 					}
-
-					var currentSnapshot = view.TextBuffer.CurrentSnapshot;
-					starts = starts.Select(p => p.TranslateTo(currentSnapshot, PointTrackingMode.Positive)).ToList();
-
-					broker.ClearSecondarySelections();
-					if (starts.Count > 0)
-					{
-						view.Caret.MoveTo(starts[0]);
-						for (var i = 1; i < starts.Count; i++)
-							broker.AddSelection(new Microsoft.VisualStudio.Text.Selection(
-								new VirtualSnapshotPoint(starts[i]),
-								new VirtualSnapshotPoint(starts[i])
-							));
-					}
+					// After the edit is applied, the selections are automatically collapsed
+					// at the start of the deleted region by the editor.
 					ModeManager.Instance.EnterInsert();
 					return true;
 
