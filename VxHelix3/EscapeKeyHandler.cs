@@ -22,8 +22,14 @@ namespace VxHelix3
 
 		public bool ExecuteCommand(EscapeKeyCommandArgs args, CommandExecutionContext context)
 		{
-			ModeManager.Instance.EnterNormal();
-			return false;
+			if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+			{
+				ModeManager.Instance.EnterNormal();
+				return true;
+			}
+
+			// In normal mode, also cancel 'esc' keys as that would clear multiple selections
+			return true;
 		}
 	}
 }

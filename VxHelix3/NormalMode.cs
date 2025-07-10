@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
@@ -89,16 +90,26 @@ namespace VxHelix3
 					return true;
 
 				case 'd':
+					// Create a single edit to group all deletions into one undo transaction.
 					using (var edit = view.TextBuffer.CreateEdit())
 					{
-						broker.PerformActionOnAllSelections(_ =>
+						// Iterate over each selection managed by the broker.
+						broker.PerformActionOnAllSelections(transformer =>
 						{
-							if (!view.Selection.IsEmpty)
-								edit.Delete(view.Selection.StreamSelectionSpan.SnapshotSpan);
+							var currentSelection = transformer.Selection;
+
+							if (!currentSelection.IsEmpty)
+							{
+								// Create a new SnapshotSpan from the selection's start and end points.
+								var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
+								edit.Delete(spanToDelete);
+							}
 						});
+						// Apply all queued deletions to the buffer.
 						edit.Apply();
 					}
-					broker.PerformActionOnAllSelections(_ => view.Selection.Clear());
+					// After the edit is applied, the selections are automatically collapsed
+					// at the start of the deleted region by the editor. No further action is needed.
 					return true;
 
 				case 'c':
