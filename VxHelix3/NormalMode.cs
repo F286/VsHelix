@@ -18,40 +18,73 @@ namespace VxHelix3
 			switch (args.TypedChar)
 			{
 				case 'i':
-					broker.PerformActionOnAllSelections(_ =>
+					// For the 'insert' command, we move the caret to the start of each selection.
+					broker.PerformActionOnAllSelections(selection =>
 					{
-						view.Selection.Clear();
+						var targetPoint = selection.Selection.Start;
+						// Move the caret to the start of the selection, collapsing it.
+						selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
 					});
 					ModeManager.Instance.EnterInsert();
 					return true;
 
 				case 'a':
-					broker.PerformActionOnAllSelections(_ =>
+					broker.PerformActionOnAllSelections(selection =>
 					{
-						if (!view.Selection.IsEmpty)
-							view.Caret.MoveTo(view.Selection.End);
-						view.Selection.Clear();
+						// For the 'append' command, we determine the target position for each caret.
+						var targetPoint = selection.Selection.End;
+
+						// If the selection is empty (it's a caret), we need to move one character to the right.
+						if (selection.Selection.IsEmpty)
+						{
+							var currentPos = targetPoint.Position;
+							var line = currentPos.GetContainingLine();
+
+							// We only move the caret if it's not at the end of the line's content.
+							// If it is at the end, appending should start right there.
+							if (currentPos < line.End)
+							{
+								targetPoint = new VirtualSnapshotPoint(currentPos + 1);
+							}
+						}
+
+						// MoveTo() collapses the current selection and moves the caret to the specified point.
+						// We use the overload that takes a boolean to indicate we are NOT extending the selection,
+						// which effectively collapses it at the new target point.
+						selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
 					});
 					ModeManager.Instance.EnterInsert();
 					return true;
 
 				case 'w':
-					broker.PerformActionOnAllSelections(_ =>
+					broker.PerformActionOnAllSelections(selection =>
 					{
-						if (!view.Selection.IsEmpty)
-							view.Caret.MoveTo(view.Selection.End);
-						view.Selection.Clear();
-						operations.MoveToNextWord(true);
+						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						selection.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
+					});
+					return true;
+
+				case 'W':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						selection.PerformAction(PredefinedSelectionTransformations.SelectToNextWord);
 					});
 					return true;
 
 				case 'b':
-					broker.PerformActionOnAllSelections(_ =>
+					broker.PerformActionOnAllSelections(selection =>
 					{
-						if (!view.Selection.IsEmpty)
-							view.Caret.MoveTo(view.Selection.Start);
-						view.Selection.Clear();
-						operations.MoveToPreviousWord(true);
+						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousSubWord);
+					});
+					return true;
+
+				case 'B':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
 					});
 					return true;
 
@@ -103,8 +136,6 @@ namespace VxHelix3
 					ModeManager.Instance.EnterInsert();
 					return true;
 
-				case (char)0x1b:
-					return true;
 			}
 
 			return true;
