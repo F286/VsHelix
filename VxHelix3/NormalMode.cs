@@ -23,12 +23,7 @@ namespace VxHelix3
 					SelectionManager.Instance.SaveSelections(broker);
 
 					// For the 'insert' command, we move the caret to the start of each selection.
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						var targetPoint = selection.Selection.Start;
-						// Move the caret to the start of the selection, collapsing it.
-						selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
-					});
+					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionStart(selection));
 					ModeManager.Instance.EnterInsert();
 					return true;
 
@@ -36,72 +31,46 @@ namespace VxHelix3
 					// Save the current selections before entering insert mode.
 					SelectionManager.Instance.SaveSelections(broker);
 
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						// For the 'append' command, we determine the target position for each caret.
-						var targetPoint = selection.Selection.End;
-
-						// If the selection is empty (it's a caret), we need to move one character to the right.
-						if (selection.Selection.IsEmpty)
-						{
-							var currentPos = targetPoint.Position;
-							var line = currentPos.GetContainingLine();
-
-							// We only move the caret if it's not at the end of the line's content.
-							// If it is at the end, appending should start right there.
-							if (currentPos < line.End)
-							{
-								targetPoint = new VirtualSnapshotPoint(currentPos + 1);
-							}
-						}
-
-						// MoveTo() collapses the current selection and moves the caret to the specified point.
-						// We use the overload that takes a boolean to indicate we are NOT extending the selection,
-						// which effectively collapses it at the new target point.
-						selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
-					});
+					// For the 'append' command, move the caret to the end of the selection.
+					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionEnd(selection));
 					ModeManager.Instance.EnterInsert();
 					return true;
 
-                                case 'w':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-                                                selection.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
-                                        });
-                                        return true;
+				case 'w':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						selection.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
+					});
+					return true;
 
-                                case 'h':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
-                                        });
-                                        return true;
+				case 'h':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+					});
+					return true;
 
-                                case 'j':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
-                                        });
-                                        return true;
+				case 'j':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
+					});
+					return true;
 
-                                case 'k':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
-                                        });
-                                        return true;
+				case 'k':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
+					});
+					return true;
 
-                                case 'l':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
-                                        });
-                                        return true;
+				case 'l':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+					});
+					return true;
 
 				case 'W':
 					broker.PerformActionOnAllSelections(selection =>
@@ -128,55 +97,69 @@ namespace VxHelix3
 					return true;
 
 				case 'd':
-					// Create a single edit to group all deletions into one undo transaction.
-					using (var edit = view.TextBuffer.CreateEdit())
-					{
-						// Iterate over each selection managed by the broker.
-						broker.PerformActionOnAllSelections(transformer =>
-						{
-							var currentSelection = transformer.Selection;
-
-							if (!currentSelection.IsEmpty)
-							{
-								// Create a new SnapshotSpan from the selection's start and end points.
-								var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
-								edit.Delete(spanToDelete);
-							}
-						});
-						// Apply all queued deletions to the buffer.
-						edit.Apply();
-					}
+					DeleteSelection(view, broker);
 					// After the edit is applied, the selections are automatically collapsed
 					// at the start of the deleted region by the editor. No further action is needed.
 					return true;
 
 				case 'c':
-					// Create a single edit to group all deletions into one undo transaction.
-					using (var edit = view.TextBuffer.CreateEdit())
-					{
-						// Iterate over each selection managed by the broker.
-						broker.PerformActionOnAllSelections(transformer =>
-						{
-							var currentSelection = transformer.Selection;
-
-							if (!currentSelection.IsEmpty)
-							{
-								// Create a new SnapshotSpan from the selection's start and end points.
-								var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
-								edit.Delete(spanToDelete);
-							}
-						});
-						// Apply all queued deletions to the buffer.
-						edit.Apply();
-					}
+					DeleteSelection(view, broker);
 					// After the edit is applied, the selections are automatically collapsed
 					// at the start of the deleted region by the editor.
 					ModeManager.Instance.EnterInsert();
 					return true;
-
 			}
 
 			return true;
+		}
+
+		/// <summary>
+		/// Deletes the content of all non-empty selections.
+		/// </summary>
+		/// <param name="view">The text view.</param>
+		/// <param name="broker">The multi-selection broker.</param>
+		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
+		{
+			// Create a single edit to group all deletions into one undo transaction.
+			using (var edit = view.TextBuffer.CreateEdit())
+			{
+				// Iterate over each selection managed by the broker.
+				broker.PerformActionOnAllSelections(transformer =>
+				{
+					var currentSelection = transformer.Selection;
+
+					if (!currentSelection.IsEmpty)
+					{
+						// Create a new SnapshotSpan from the selection's start and end points.
+						var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
+						edit.Delete(spanToDelete);
+					}
+				});
+				// Apply all queued deletions to the buffer.
+				edit.Apply();
+			}
+		}
+
+		/// <summary>
+		/// Moves the caret to the start of the selection, collapsing it.
+		/// </summary>
+		/// <param name="selection">The selection transformer for a single selection.</param>
+		private void MoveCaretToSelectionStart(ISelectionTransformer selection)
+		{
+			var targetPoint = selection.Selection.Start;
+			// Move the caret to the start of the selection, collapsing it.
+			selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
+		}
+
+		/// <summary>
+		/// Moves the caret to the end of the selection, collapsing it.
+		/// </summary>
+		/// <param name="selection">The selection transformer for a single selection.</param>
+		private void MoveCaretToSelectionEnd(ISelectionTransformer selection)
+		{
+			var targetPoint = selection.Selection.End;
+			// Move the caret to the end of the selection, collapsing it.
+			selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
 		}
 	}
 }
