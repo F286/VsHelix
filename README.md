@@ -15,6 +15,7 @@ command handler and will grow into a small set of core commands.
 4. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
 5. Press `w` to extend each caret to the start of the next word.
+6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
@@ -34,5 +35,6 @@ or using `VSIXInstaller.exe`.
 - `VsHelix.csproj` – Project definition and SDK references.
 - `source.extension.vsixmanifest` – Extension manifest used by Visual Studio.
 
-The extension includes a `HelixCommandHandler` implementing the `w` command
-which moves each selection to the start of the next word.
+The extension includes a `HelixCommandHandler` implementing basic motions like
+`w` for word forward as well as `h`, `j`, `k`, and `l` for left, down, up, and
+right movement across all selections.
