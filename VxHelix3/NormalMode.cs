@@ -89,55 +89,45 @@ namespace VxHelix3
 					});
 					return true;
 
-                                case 'B':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-                                                selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
-                                        });
-                                        return true;
+				case 'B':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
+					});
+					return true;
 
-                                case 'x':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                if (selection.Selection.IsEmpty)
-                                                {
-                                                        selection.PerformAction(PredefinedSelectionTransformations.SelectCurrentLine);
-                                                }
-                                                else
-                                                {
-                                                        selection.PerformAction(PredefinedSelectionTransformations.SelectToNextLine);
-                                                }
-                                        });
-                                        return true;
+				case 'x':
+					broker.PerformActionOnAllSelections(selection =>
+					{
+						int length = selection.Selection.Extent.Length;
+						selection.PerformAction(PredefinedSelectionTransformations.ExpandSelectionToEntireLine);
+						if (length == selection.Selection.Extent.Length) // no change then..
+						{
+							selection.PerformAction(PredefinedSelectionTransformations.SelectToNextLine);
+							selection.PerformAction(PredefinedSelectionTransformations.ExpandSelectionToEntireLine);
+						}
+						// TODO: Some slight bugs here on detecting if the currently selected line is 'fully selected' for some cases
+					});
+					return true;
 
-                                case 'd':
-                                        DeleteSelection(view, broker);
-                                        // After the edit is applied, the selections are automatically collapsed
-                                        // at the start of the deleted region by the editor. No further action is needed.
-                                        return true;
+				case 'd':
+					DeleteSelection(view, broker);
+					// After the edit is applied, the selections are automatically collapsed
+					// at the start of the deleted region by the editor. No further action is needed.
+					return true;
 
-                                case 'c':
-                                        DeleteSelection(view, broker);
-                                        // After the edit is applied, the selections are automatically collapsed
-                                        // at the start of the deleted region by the editor.
-                                        ModeManager.Instance.EnterInsert();
-                                        return true;
+				case 'c':
+					DeleteSelection(view, broker);
+					// After the edit is applied, the selections are automatically collapsed
+					// at the start of the deleted region by the editor.
+					ModeManager.Instance.EnterInsert();
+					return true;
 
-                                case 'C':
-                                        broker.PerformActionOnAllSelections(selection =>
-                                        {
-                                                if ((Keyboard.Modifiers & ModifierKeys.Alt) != 0)
-                                                {
-                                                        selection.PerformAction(PredefinedSelectionTransformations.AddCaretAbove);
-                                                }
-                                                else
-                                                {
-                                                        selection.PerformAction(PredefinedSelectionTransformations.AddCaretBelow);
-                                                }
-                                        });
-                                        return true;
-                        }
+				case 'C':
+					// TODO: This should add an addional caret, on the line right below the lowest caret that exists for any selection
+					return true;
+			}
 
 			return true;
 		}
