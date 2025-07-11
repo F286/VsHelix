@@ -63,13 +63,45 @@ namespace VxHelix3
 					ModeManager.Instance.EnterInsert();
 					return true;
 
-				case 'w':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
-					});
-					return true;
+                                case 'w':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
+                                        });
+                                        return true;
+
+                                case 'h':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+                                        });
+                                        return true;
+
+                                case 'j':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
+                                        });
+                                        return true;
+
+                                case 'k':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
+                                        });
+                                        return true;
+
+                                case 'l':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+                                        });
+                                        return true;
 
 				case 'W':
 					broker.PerformActionOnAllSelections(selection =>
