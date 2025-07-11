@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Operations;
+using System.Windows.Input;
 using VxHelix3;
 
 namespace VxHelix3
@@ -88,27 +89,55 @@ namespace VxHelix3
 					});
 					return true;
 
-				case 'B':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
-					});
-					return true;
+                                case 'B':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
+                                        });
+                                        return true;
 
-				case 'd':
-					DeleteSelection(view, broker);
-					// After the edit is applied, the selections are automatically collapsed
-					// at the start of the deleted region by the editor. No further action is needed.
-					return true;
+                                case 'x':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                if (selection.Selection.IsEmpty)
+                                                {
+                                                        selection.PerformAction(PredefinedSelectionTransformations.SelectCurrentLine);
+                                                }
+                                                else
+                                                {
+                                                        selection.PerformAction(PredefinedSelectionTransformations.SelectToNextLine);
+                                                }
+                                        });
+                                        return true;
 
-				case 'c':
-					DeleteSelection(view, broker);
-					// After the edit is applied, the selections are automatically collapsed
-					// at the start of the deleted region by the editor.
-					ModeManager.Instance.EnterInsert();
-					return true;
-			}
+                                case 'd':
+                                        DeleteSelection(view, broker);
+                                        // After the edit is applied, the selections are automatically collapsed
+                                        // at the start of the deleted region by the editor. No further action is needed.
+                                        return true;
+
+                                case 'c':
+                                        DeleteSelection(view, broker);
+                                        // After the edit is applied, the selections are automatically collapsed
+                                        // at the start of the deleted region by the editor.
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
+
+                                case 'C':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                if ((Keyboard.Modifiers & ModifierKeys.Alt) != 0)
+                                                {
+                                                        selection.PerformAction(PredefinedSelectionTransformations.AddCaretAbove);
+                                                }
+                                                else
+                                                {
+                                                        selection.PerformAction(PredefinedSelectionTransformations.AddCaretBelow);
+                                                }
+                                        });
+                                        return true;
+                        }
 
 			return true;
 		}

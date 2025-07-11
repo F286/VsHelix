@@ -37,4 +37,7 @@ or using `VSIXInstaller.exe`.
 
 The extension includes a `HelixCommandHandler` implementing basic motions like
 `w` for word forward as well as `h`, `j`, `k`, and `l` for left, down, up, and
-right movement across all selections.
+right movement across all selections.  The `x` key selects the current line or
+extends the selection to the next line when pressed repeatedly.  Pressing `C`
+copies the current selection to the line below while <kbd>Alt</kbd>+`C`
+duplicates the selection on the line above.
