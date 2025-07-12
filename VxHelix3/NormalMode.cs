@@ -13,10 +13,17 @@ namespace VxHelix3
 	/// <summary>
 	/// Handles key input when in Normal mode.
 	/// </summary>
-	internal sealed class NormalMode : IInputMode
-	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-		{
+internal sealed class NormalMode : IInputMode
+        {
+                private readonly SearchMode _searchMode;
+
+                internal NormalMode(SearchMode searchMode)
+                {
+                        _searchMode = searchMode;
+                }
+
+                public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+                {
 			switch (args.TypedChar)
 			{
 				case 'i':
@@ -89,13 +96,19 @@ namespace VxHelix3
 					});
 					return true;
 
-				case 'B':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
-					});
-					return true;
+                                case 'B':
+                                        broker.PerformActionOnAllSelections(selection =>
+                                        {
+                                                selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                                selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
+                                        });
+                                        return true;
+
+                                case '/':
+                                        return _searchMode.Handle(args, view, broker, operations);
+
+                                case 'n':
+                                        return _searchMode.Handle(args, view, broker, operations);
 
 				case 'x':
 					broker.PerformActionOnAllSelections(selection =>

@@ -16,6 +16,8 @@ command handler and will grow into a small set of core commands.
    `Ctrl+Alt+Click` to place additional carets.
 5. Press `w` to extend each caret to the start of the next word.
 6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
+7. Press `/` to search using a regular expression starting at the primary caret.  The match is selected across all carets using Visual Studio's incremental search.
+8. Press `n` to repeat the last search and select the next match.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
