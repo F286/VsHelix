@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Operations;
+using Microsoft.VisualStudio.Text.IncrementalSearch;
 using Microsoft.VisualStudio.Utilities;
 
 namespace VxHelix3
@@ -23,15 +24,21 @@ namespace VxHelix3
 	{
 		private const string ModeKey = nameof(TypeCharFilter) + "_mode";
 
-		private readonly IEditorOperationsFactoryService _editorOperationsFactory;
-		private readonly IInputMode _insertMode = new InsertMode();
-		private readonly IInputMode _normalMode = new NormalMode();
+                private readonly IEditorOperationsFactoryService _editorOperationsFactory;
+                private readonly IInputMode _insertMode = new InsertMode();
+                private readonly SearchMode _searchMode;
+                private readonly IInputMode _normalMode;
 
-		[ImportingConstructor]
-		internal TypeCharFilter(IEditorOperationsFactoryService editorOperationsFactory)
-		{
-			_editorOperationsFactory = editorOperationsFactory;
-		}
+                [ImportingConstructor]
+                internal TypeCharFilter(
+                        IEditorOperationsFactoryService editorOperationsFactory,
+                        ITextSearchService textSearchService,
+                        IIncrementalSearchFactoryService incrementalSearchFactory)
+                {
+                        _editorOperationsFactory = editorOperationsFactory;
+                        _searchMode = new SearchMode(textSearchService, incrementalSearchFactory);
+                        _normalMode = new NormalMode(_searchMode);
+                }
 
 		public string DisplayName => "Helix Emulation (demo)";
 
@@ -44,14 +51,14 @@ namespace VxHelix3
 			var broker = view.GetMultiSelectionBroker();
 			var ops = _editorOperationsFactory.GetEditorOperations(view);
 			
-			if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
-			{
-				return _normalMode.Handle(args, view, broker, ops);
-			}
-			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
-			{
-				return _insertMode.Handle(args, view, broker, ops);
-			}
+                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
+                        {
+                                return _normalMode.Handle(args, view, broker, ops);
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+                        {
+                                return _insertMode.Handle(args, view, broker, ops);
+                        }
 
 			return false;
 		}

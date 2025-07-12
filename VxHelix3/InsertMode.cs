@@ -11,9 +11,9 @@ namespace VxHelix3
 	/// </summary>
 	internal sealed class InsertMode : IInputMode
 	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-		{
-			return false;
-		}
+               public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+               {
+                       return false;
+               }
 	}
 }

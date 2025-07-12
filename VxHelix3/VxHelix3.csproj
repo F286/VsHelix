@@ -5,12 +5,17 @@
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
 
     <VssdkCompatibleExtension>true</VssdkCompatibleExtension>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="HelixMode.cs" />
     <Compile Remove="ModeService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
 
   <ItemGroup>
