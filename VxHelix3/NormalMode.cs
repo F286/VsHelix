@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Text;
@@ -28,14 +29,24 @@ namespace VxHelix3
 					ModeManager.Instance.EnterInsert();
 					return true;
 
-				case 'a':
-					// Save the current selections before entering insert mode.
-					SelectionManager.Instance.SaveSelections(broker);
+                                case 'a':
+                                        // Save the current selections before entering insert mode.
+                                        SelectionManager.Instance.SaveSelections(broker);
 
-					// For the 'append' command, move the caret to the end of the selection.
-					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionEnd(selection));
-					ModeManager.Instance.EnterInsert();
-					return true;
+                                        // For the 'append' command, move the caret to the end of the selection.
+                                        broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionEnd(selection));
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
+
+                                case 'o':
+                                        AddLine(view, broker, above: false);
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
+
+                                case 'O':
+                                        AddLine(view, broker, above: true);
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
 
 				case 'w':
 					broker.PerformActionOnAllSelections(selection =>
@@ -174,11 +185,47 @@ namespace VxHelix3
 		/// Moves the caret to the end of the selection, collapsing it.
 		/// </summary>
 		/// <param name="selection">The selection transformer for a single selection.</param>
-		private void MoveCaretToSelectionEnd(ISelectionTransformer selection)
-		{
-			var targetPoint = selection.Selection.End;
-			// Move the caret to the end of the selection, collapsing it.
-			selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
-		}
-	}
+                private void MoveCaretToSelectionEnd(ISelectionTransformer selection)
+                {
+                        var targetPoint = selection.Selection.End;
+                        // Move the caret to the end of the selection, collapsing it.
+                        selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
+                }
+
+                /// <summary>
+                /// Inserts a new blank line above or below each selection and moves the caret to it.
+                /// </summary>
+                /// <param name="view">The text view.</param>
+                /// <param name="broker">The multi-selection broker.</param>
+                /// <param name="above">True to insert above, false for below.</param>
+                private void AddLine(ITextView view, IMultiSelectionBroker broker, bool above)
+                {
+                        var snapshot = view.TextBuffer.CurrentSnapshot;
+                        var insertionPoints = new List<ITrackingPoint>();
+
+                        broker.PerformActionOnAllSelections(selection =>
+                        {
+                                var line = selection.Selection.ActivePoint.Position.GetContainingLine();
+                                int pos = above ? line.Start.Position : line.End.Position;
+                                insertionPoints.Add(snapshot.CreateTrackingPoint(pos, PointTrackingMode.Positive));
+                        });
+
+                        using (var edit = view.TextBuffer.CreateEdit())
+                        {
+                                foreach (var tp in insertionPoints)
+                                {
+                                        edit.Insert(tp.GetPosition(snapshot), Environment.NewLine);
+                                }
+                                edit.Apply();
+                        }
+
+                        var newSnapshot = view.TextBuffer.CurrentSnapshot;
+                        int index = 0;
+                        broker.PerformActionOnAllSelections(selection =>
+                        {
+                                var pos = insertionPoints[index++].GetPosition(newSnapshot);
+                                selection.MoveTo(new SnapshotPoint(newSnapshot, pos), false, PositionAffinity.Successor);
+                        });
+                }
+        }
 }
