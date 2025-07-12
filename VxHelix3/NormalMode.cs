@@ -154,17 +154,27 @@ namespace VxHelix3
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
 				// Iterate over each selection managed by the broker.
-				broker.PerformActionOnAllSelections(transformer =>
-				{
-					var currentSelection = transformer.Selection;
+                                broker.PerformActionOnAllSelections(transformer =>
+                                {
+                                        var currentSelection = transformer.Selection;
 
-					if (!currentSelection.IsEmpty)
-					{
-						// Create a new SnapshotSpan from the selection's start and end points.
-						var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
-						edit.Delete(spanToDelete);
-					}
-				});
+                                        if (!currentSelection.IsEmpty)
+                                        {
+                                                // Create a new SnapshotSpan from the selection's start and end points.
+                                                var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
+
+                                                // If the span exactly covers one or more whole lines,
+                                                // extend it to include the trailing line break of the last line.
+                                                var startLine = spanToDelete.Start.GetContainingLine();
+                                                var endLine = spanToDelete.End.GetContainingLine();
+                                                if (spanToDelete.Start == startLine.Start && spanToDelete.End == endLine.End)
+                                                {
+                                                        spanToDelete = new SnapshotSpan(spanToDelete.Start, endLine.EndIncludingLineBreak);
+                                                }
+
+                                                edit.Delete(spanToDelete);
+                                        }
+                                });
 				// Apply all queued deletions to the buffer.
 				edit.Apply();
 			}
