@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.VisualStudio.Shell;
 
 public sealed class ModeManager
 {
@@ -19,6 +20,15 @@ public sealed class ModeManager
 	public enum EditorMode { Normal, Insert }
 	public EditorMode Current { get; private set; } = EditorMode.Normal;
 
-	public void EnterInsert() => Current = EditorMode.Insert;
-	public void EnterNormal() => Current = EditorMode.Normal;
+        public void EnterInsert()
+        {
+                Current = EditorMode.Insert;
+                StatusBarHelper.ShowMode(Current);
+        }
+
+        public void EnterNormal()
+        {
+                Current = EditorMode.Normal;
+                StatusBarHelper.ShowMode(Current);
+        }
 }
