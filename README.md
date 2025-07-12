@@ -42,4 +42,6 @@ extends the selection to the next line when pressed repeatedly.  Pressing `C`
 copies the current selection to the line below while <kbd>Alt</kbd>+`C`
 duplicates the selection on the line above.  Use `o` to open a new line below
 each caret and `O` to open one above.  Both commands switch to insert mode at
-the newly inserted line.
+the newly inserted line with the indentation of the surrounding text.
+Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
+returning to normal mode.

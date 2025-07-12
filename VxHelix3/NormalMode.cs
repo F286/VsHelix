@@ -38,15 +38,15 @@ namespace VxHelix3
 					ModeManager.Instance.EnterInsert();
 					return true;
 
-				case 'o':
-					AddLine(view, broker, above: false);
-					ModeManager.Instance.EnterInsert();
-					return true;
+                                case 'o':
+                                        AddLine(view, broker, operations, above: false);
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
 
-				case 'O':
-					AddLine(view, broker, above: true);
-					ModeManager.Instance.EnterInsert();
-					return true;
+                                case 'O':
+                                        AddLine(view, broker, operations, above: true);
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
 
 				case 'w':
 					broker.PerformActionOnAllSelections(selection =>
@@ -198,34 +198,45 @@ namespace VxHelix3
 		/// <param name="view">The text view.</param>
 		/// <param name="broker">The multi-selection broker.</param>
 		/// <param name="above">True to insert above, false for below.</param>
-		private void AddLine(ITextView view, IMultiSelectionBroker broker, bool above)
-		{
-			var snapshot = view.TextBuffer.CurrentSnapshot;
-			var insertionPoints = new List<ITrackingPoint>();
+                private void AddLine(ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, bool above)
+                {
+                        var snapshot = view.TextBuffer.CurrentSnapshot;
+                        var insertionPoints = new List<ITrackingPoint>();
+                        var indents = new List<string>();
 
-			broker.PerformActionOnAllSelections(selection =>
-			{
-				var line = selection.Selection.ActivePoint.Position.GetContainingLine();
-				int pos = above ? line.Start.Position : line.End.Position;
-				insertionPoints.Add(snapshot.CreateTrackingPoint(pos, PointTrackingMode.Positive));
-			});
+                        broker.PerformActionOnAllSelections(selection =>
+                        {
+                                var line = selection.Selection.ActivePoint.Position.GetContainingLine();
+                                var lineText = line.GetText();
+                                var indent = lineText.Substring(0, lineText.Length - lineText.TrimStart().Length);
+                                indents.Add(indent);
 
-			using (var edit = view.TextBuffer.CreateEdit())
-			{
-				foreach (var tp in insertionPoints)
-				{
-					edit.Insert(tp.GetPosition(snapshot), Environment.NewLine);
-				}
-				edit.Apply();
-			}
+                                int pos = above ? line.Start.Position : line.EndIncludingLineBreak.Position;
+                                var trackingMode = PointTrackingMode.Negative;
+                                insertionPoints.Add(snapshot.CreateTrackingPoint(pos, trackingMode));
+                        });
 
-			var newSnapshot = view.TextBuffer.CurrentSnapshot;
-			int index = 0;
-			broker.PerformActionOnAllSelections(selection =>
-			{
-				var pos = insertionPoints[index++].GetPosition(newSnapshot);
-				selection.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(newSnapshot, pos)), false, PositionAffinity.Successor);
-			});
-		}
+                        using (var edit = view.TextBuffer.CreateEdit())
+                        {
+                                int i = 0;
+                                foreach (var tp in insertionPoints)
+                                {
+                                        var indent = indents[i++];
+                                        edit.Insert(tp.GetPosition(snapshot), Environment.NewLine + indent);
+                                }
+                                edit.Apply();
+                        }
+
+                        var newSnapshot = view.TextBuffer.CurrentSnapshot;
+                        int index = 0;
+                        broker.PerformActionOnAllSelections(selection =>
+                        {
+                                var pos = insertionPoints[index].GetPosition(newSnapshot);
+                                var indent = indents[index];
+                                index++;
+                                var offset = Environment.NewLine.Length + indent.Length;
+                                selection.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(newSnapshot, pos + offset)), false, PositionAffinity.Successor);
+                        });
+                }
 	}
 }
