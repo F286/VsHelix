@@ -211,7 +211,7 @@ namespace VxHelix3
                                 var indent = lineText.Substring(0, lineText.Length - lineText.TrimStart().Length);
                                 indents.Add(indent);
 
-                                int pos = above ? line.Start.Position : line.EndIncludingLineBreak.Position;
+                                int pos = above ? line.Start.Position : line.End.Position;
                                 var trackingMode = PointTrackingMode.Negative;
                                 insertionPoints.Add(snapshot.CreateTrackingPoint(pos, trackingMode));
                         });
@@ -222,7 +222,8 @@ namespace VxHelix3
                                 foreach (var tp in insertionPoints)
                                 {
                                         var indent = indents[i++];
-                                        edit.Insert(tp.GetPosition(snapshot), Environment.NewLine + indent);
+                                        var text = above ? indent + Environment.NewLine : Environment.NewLine + indent;
+                                        edit.Insert(tp.GetPosition(snapshot), text);
                                 }
                                 edit.Apply();
                         }
@@ -234,7 +235,7 @@ namespace VxHelix3
                                 var pos = insertionPoints[index].GetPosition(newSnapshot);
                                 var indent = indents[index];
                                 index++;
-                                var offset = Environment.NewLine.Length + indent.Length;
+                                var offset = above ? indent.Length : Environment.NewLine.Length + indent.Length;
                                 selection.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(newSnapshot, pos + offset)), false, PositionAffinity.Successor);
                         });
                 }
