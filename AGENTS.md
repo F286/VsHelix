@@ -7,6 +7,7 @@ and only targets Visual Studio 2022.
 ## Coding Conventions
 
 - Language: **C#** targeting .NET Framework 4.7.2.
+- Use **tabs** for indentation to match the existing source files.
 - Use Visual Studio's `IMultiSelectionBroker` API for all caret and selection
   manipulation.  Do not attempt to track caret state manually.
 - Command handlers are exported with `ICommandHandler<TypeCharCommandArgs>` and
