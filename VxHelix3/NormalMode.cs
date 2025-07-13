@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using System.Windows.Documents;
+using System.Windows.Input;
 using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
+using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
+using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Operations;
-using System.Windows.Input;
 using VxHelix3;
 
 namespace VxHelix3
@@ -136,11 +140,141 @@ namespace VxHelix3
 					return true;
 
 				case 'C':
-					// TODO: This should add an addional caret, on the line right below the lowest caret that exists for any selection
+					AddCaretBelowLastSelection(view, broker);
 					return true;
 			}
 
 			return true;
+		}
+
+		private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
+		{
+			// Find the bottom-most selection
+			var bottomSelection = broker.AllSelections
+				.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber)
+				.ThenByDescending(s => s.End.Position.Position)
+				.FirstOrDefault();
+
+			if (bottomSelection == null)
+			{
+				return;
+			}
+
+			ITextSnapshot snapshot = view.TextSnapshot;
+			var startPoint = bottomSelection.Start;
+			var endPoint = bottomSelection.End;
+
+			var startLine = startPoint.Position.GetContainingLine();
+			var endLine = endPoint.Position.GetContainingLine();
+
+			if (startLine.LineNumber != endLine.LineNumber)
+			{
+				// For now, only handle single-line selections.
+				return;
+			}
+
+			// Get the text from the original line
+			string originalLineText = startLine.GetText();
+			// Calculate tab-expanded text lengths
+			string expandedText = originalLineText.Replace("\t", new string(' ', view.Options.GetTabSize()));
+
+			// Calculate visual offsets (accounting for tabs)
+			int startOffset = CalculateExpandedOffset(
+				originalLineText.Substring(0, startPoint.Position - startLine.Start),
+				view.Options.GetTabSize());
+
+			int endOffset = CalculateExpandedOffset(
+				originalLineText.Substring(0, endPoint.Position - startLine.Start),
+				view.Options.GetTabSize());
+
+			// Add virtual spaces
+			startOffset += startPoint.VirtualSpaces;
+			endOffset += endPoint.VirtualSpaces;
+
+			// Find a suitable line below
+			int nextLineNumber = endLine.LineNumber + 1;
+			ITextSnapshotLine nextLine = null;
+
+			while (nextLineNumber < snapshot.LineCount)
+			{
+				nextLine = snapshot.GetLineFromLineNumber(nextLineNumber);
+				break; // Always consider the next line even if it's short
+			}
+
+			if (nextLine == null)
+			{
+				return;
+			}
+
+			// Create positions on the next line at the same visual offsets
+			var newStartPoint = CreatePointAtVisualOffset(nextLine, startOffset, view.Options.GetTabSize());
+			var newEndPoint = CreatePointAtVisualOffset(nextLine, endOffset, view.Options.GetTabSize());
+
+			// Create new selection with the same direction as the original
+			var newSelection = bottomSelection.IsReversed
+				? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)
+				: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);
+
+			broker.AddSelection(newSelection);
+		}
+
+		/// <summary>
+		/// Calculates the expanded length of text after replacing tabs with spaces.
+		/// </summary>
+		private int CalculateExpandedOffset(string text, int tabSize)
+		{
+			int expandedLength = 0;
+			foreach (char c in text)
+			{
+				if (c == '\t')
+				{
+					// Calculate how many spaces this tab represents
+					int spacesForTab = tabSize - (expandedLength % tabSize);
+					expandedLength += spacesForTab;
+				}
+				else
+				{
+					expandedLength++;
+				}
+			}
+			return expandedLength;
+		}
+
+		/// <summary>
+		/// Creates a virtual point at a specific visual offset on a line, accounting for tabs.
+		/// </summary>
+		private VirtualSnapshotPoint CreatePointAtVisualOffset(ITextSnapshotLine line, int visualOffset, int tabSize)
+		{
+			string lineText = line.GetText();
+			int currentVisualOffset = 0;
+			int charOffset = 0;
+
+			// Calculate which character position corresponds to the visual offset
+			while (charOffset < lineText.Length && currentVisualOffset < visualOffset)
+			{
+				if (lineText[charOffset] == '\t')
+				{
+					int spacesForTab = tabSize - (currentVisualOffset % tabSize);
+					currentVisualOffset += spacesForTab;
+				}
+				else
+				{
+					currentVisualOffset++;
+				}
+
+				if (currentVisualOffset <= visualOffset)
+				{
+					charOffset++;
+				}
+			}
+
+			// Calculate virtual spaces needed
+			int virtualSpaces = visualOffset - currentVisualOffset;
+			if (virtualSpaces < 0) virtualSpaces = 0;
+
+			// Create the point at the appropriate position
+			var snapshotPoint = new SnapshotPoint(line.Snapshot, line.Start.Position + charOffset);
+			return new VirtualSnapshotPoint(snapshotPoint, virtualSpaces);
 		}
 
 		/// <summary>
