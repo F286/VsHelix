@@ -177,33 +177,47 @@ namespace VxHelix3
 			string originalLineText = startLine.GetText();
 			// Calculate tab-expanded text lengths
 			string expandedText = originalLineText.Replace("\t", new string(' ', view.Options.GetTabSize()));
-
+			
 			// Calculate visual offsets (accounting for tabs)
 			int startOffset = CalculateExpandedOffset(
 				originalLineText.Substring(0, startPoint.Position - startLine.Start),
 				view.Options.GetTabSize());
-
+			
 			int endOffset = CalculateExpandedOffset(
 				originalLineText.Substring(0, endPoint.Position - startLine.Start),
 				view.Options.GetTabSize());
-
+			
 			// Add virtual spaces
 			startOffset += startPoint.VirtualSpaces;
 			endOffset += endPoint.VirtualSpaces;
 
-			// Find a suitable line below
+			// Find a suitable line below that has enough length
 			int nextLineNumber = endLine.LineNumber + 1;
 			ITextSnapshotLine nextLine = null;
+			int maxNeededOffset = Math.Max(startOffset, endOffset);
 
 			while (nextLineNumber < snapshot.LineCount)
 			{
-				nextLine = snapshot.GetLineFromLineNumber(nextLineNumber);
-				break; // Always consider the next line even if it's short
+				var candidateLine = snapshot.GetLineFromLineNumber(nextLineNumber);
+				string candidateText = candidateLine.GetText();
+				
+				// Calculate the expanded length of this line
+				int expandedLineLength = CalculateExpandedOffset(candidateText, view.Options.GetTabSize());
+				
+				// Check if this line has enough length to accommodate our selection
+				if (expandedLineLength >= maxNeededOffset)
+				{
+					nextLine = candidateLine;
+					break;
+				}
+				
+				// Line is too short, try the next one
+				nextLineNumber++;
 			}
 
 			if (nextLine == null)
 			{
-				return;
+				return; // No suitable line found
 			}
 
 			// Create positions on the next line at the same visual offsets
@@ -248,7 +262,7 @@ namespace VxHelix3
 			string lineText = line.GetText();
 			int currentVisualOffset = 0;
 			int charOffset = 0;
-
+			
 			// Calculate which character position corresponds to the visual offset
 			while (charOffset < lineText.Length && currentVisualOffset < visualOffset)
 			{
@@ -261,17 +275,17 @@ namespace VxHelix3
 				{
 					currentVisualOffset++;
 				}
-
+				
 				if (currentVisualOffset <= visualOffset)
 				{
 					charOffset++;
 				}
 			}
-
+			
 			// Calculate virtual spaces needed
 			int virtualSpaces = visualOffset - currentVisualOffset;
 			if (virtualSpaces < 0) virtualSpaces = 0;
-
+			
 			// Create the point at the appropriate position
 			var snapshotPoint = new SnapshotPoint(line.Snapshot, line.Start.Position + charOffset);
 			return new VirtualSnapshotPoint(snapshotPoint, virtualSpaces);
