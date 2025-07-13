@@ -38,15 +38,15 @@ namespace VxHelix3
 					ModeManager.Instance.EnterInsert();
 					return true;
 
-                                case 'o':
-                                        AddLine(view, broker, operations, above: false);
-                                        ModeManager.Instance.EnterInsert();
-                                        return true;
+				case 'o':
+					AddLine(view, broker, operations, above: false);
+					ModeManager.Instance.EnterInsert();
+					return true;
 
-                                case 'O':
-                                        AddLine(view, broker, operations, above: true);
-                                        ModeManager.Instance.EnterInsert();
-                                        return true;
+				case 'O':
+					AddLine(view, broker, operations, above: true);
+					ModeManager.Instance.EnterInsert();
+					return true;
 
 				case 'w':
 					broker.PerformActionOnAllSelections(selection =>
@@ -154,27 +154,27 @@ namespace VxHelix3
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
 				// Iterate over each selection managed by the broker.
-                                broker.PerformActionOnAllSelections(transformer =>
-                                {
-                                        var currentSelection = transformer.Selection;
+				broker.PerformActionOnAllSelections(transformer =>
+				{
+					var currentSelection = transformer.Selection;
 
-                                        if (!currentSelection.IsEmpty)
-                                        {
-                                                // Create a new SnapshotSpan from the selection's start and end points.
-                                                var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
+					if (!currentSelection.IsEmpty)
+					{
+						// Create a new SnapshotSpan from the selection's start and end points.
+						var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
 
-                                                // If the span exactly covers one or more whole lines,
-                                                // extend it to include the trailing line break of the last line.
-                                                var startLine = spanToDelete.Start.GetContainingLine();
-                                                var endLine = spanToDelete.End.GetContainingLine();
-                                                if (spanToDelete.Start == startLine.Start && spanToDelete.End == endLine.End)
-                                                {
-                                                        spanToDelete = new SnapshotSpan(spanToDelete.Start, endLine.EndIncludingLineBreak);
-                                                }
+						// If the span exactly covers one or more whole lines,
+						// extend it to include the trailing line break of the last line.
+						var startLine = spanToDelete.Start.GetContainingLine();
+						var endLine = spanToDelete.End.GetContainingLine();
+						if (spanToDelete.Start == startLine.Start && spanToDelete.End == endLine.End)
+						{
+							spanToDelete = new SnapshotSpan(spanToDelete.Start, endLine.EndIncludingLineBreak);
+						}
 
-                                                edit.Delete(spanToDelete);
-                                        }
-                                });
+						edit.Delete(spanToDelete);
+					}
+				});
 				// Apply all queued deletions to the buffer.
 				edit.Apply();
 			}
@@ -208,46 +208,46 @@ namespace VxHelix3
 		/// <param name="view">The text view.</param>
 		/// <param name="broker">The multi-selection broker.</param>
 		/// <param name="above">True to insert above, false for below.</param>
-                private void AddLine(ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, bool above)
-                {
-                        var snapshot = view.TextBuffer.CurrentSnapshot;
-                        var insertionPoints = new List<ITrackingPoint>();
-                        var indents = new List<string>();
+		private void AddLine(ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, bool above)
+		{
+			var snapshot = view.TextBuffer.CurrentSnapshot;
+			var insertionPoints = new List<ITrackingPoint>();
+			var indents = new List<string>();
 
-                        broker.PerformActionOnAllSelections(selection =>
-                        {
-                                var line = selection.Selection.ActivePoint.Position.GetContainingLine();
-                                var lineText = line.GetText();
-                                var indent = lineText.Substring(0, lineText.Length - lineText.TrimStart().Length);
-                                indents.Add(indent);
+			broker.PerformActionOnAllSelections(selection =>
+			{
+				var line = selection.Selection.ActivePoint.Position.GetContainingLine();
+				var lineText = line.GetText();
+				var indent = lineText.Substring(0, lineText.Length - lineText.TrimStart().Length);
+				indents.Add(indent);
 
-                                int pos = above ? line.Start.Position : line.End.Position;
-                                var trackingMode = PointTrackingMode.Negative;
-                                insertionPoints.Add(snapshot.CreateTrackingPoint(pos, trackingMode));
-                        });
+				int pos = above ? line.Start.Position : line.End.Position;
+				var trackingMode = PointTrackingMode.Negative;
+				insertionPoints.Add(snapshot.CreateTrackingPoint(pos, trackingMode));
+			});
 
-                        using (var edit = view.TextBuffer.CreateEdit())
-                        {
-                                int i = 0;
-                                foreach (var tp in insertionPoints)
-                                {
-                                        var indent = indents[i++];
-                                        var text = above ? indent + Environment.NewLine : Environment.NewLine + indent;
-                                        edit.Insert(tp.GetPosition(snapshot), text);
-                                }
-                                edit.Apply();
-                        }
+			using (var edit = view.TextBuffer.CreateEdit())
+			{
+				int i = 0;
+				foreach (var tp in insertionPoints)
+				{
+					var indent = indents[i++];
+					var text = above ? indent + Environment.NewLine : Environment.NewLine + indent;
+					edit.Insert(tp.GetPosition(snapshot), text);
+				}
+				edit.Apply();
+			}
 
-                        var newSnapshot = view.TextBuffer.CurrentSnapshot;
-                        int index = 0;
-                        broker.PerformActionOnAllSelections(selection =>
-                        {
-                                var pos = insertionPoints[index].GetPosition(newSnapshot);
-                                var indent = indents[index];
-                                index++;
-                                var offset = above ? indent.Length : Environment.NewLine.Length + indent.Length;
-                                selection.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(newSnapshot, pos + offset)), false, PositionAffinity.Successor);
-                        });
-                }
+			var newSnapshot = view.TextBuffer.CurrentSnapshot;
+			int index = 0;
+			broker.PerformActionOnAllSelections(selection =>
+			{
+				var pos = insertionPoints[index].GetPosition(newSnapshot);
+				var indent = indents[index];
+				index++;
+				var offset = above ? indent.Length : Environment.NewLine.Length + indent.Length;
+				selection.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(newSnapshot, pos + offset)), false, PositionAffinity.Successor);
+			});
+		}
 	}
 }
