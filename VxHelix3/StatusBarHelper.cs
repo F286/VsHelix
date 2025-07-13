@@ -15,7 +15,7 @@ namespace VxHelix3
                 ModeManager.EditorMode.Insert => "INS",
                 _ => mode.ToString().ToUpperInvariant(),
             };
-            status?.SetText($"-- {text} --");
+            status?.SetText($"{text} ");
         }
     }
 }
