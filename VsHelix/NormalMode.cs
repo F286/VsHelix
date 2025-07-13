@@ -112,19 +112,55 @@ namespace VsHelix
 					});
 					return true;
 
-				case 'x':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						int length = selection.Selection.Extent.Length;
-						selection.PerformAction(PredefinedSelectionTransformations.ExpandSelectionToEntireLine);
-						if (length == selection.Selection.Extent.Length) // no change then..
-						{
-							selection.PerformAction(PredefinedSelectionTransformations.SelectToNextLine);
-							selection.PerformAction(PredefinedSelectionTransformations.ExpandSelectionToEntireLine);
-						}
-						// TODO: Some slight bugs here on detecting if the currently selected line is 'fully selected' for some cases
-					});
-					return true;
+                                case 'x':
+                                        {
+                                                var snapshot = view.TextBuffer.CurrentSnapshot;
+                                                var currentSelections = broker.AllSelections.ToList();
+                                                var newSelections = new List<Microsoft.VisualStudio.Text.Selection>();
+
+                                                foreach (var s in currentSelections)
+                                                {
+                                                        var startLine = s.Start.Position.GetContainingLine();
+                                                        var endLine = s.End.Position.GetContainingLine();
+
+                                                        bool includesBreak = s.Start.Position == startLine.Start &&
+                                                                s.End.Position == endLine.EndIncludingLineBreak;
+
+                                                        var newStart = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, startLine.Start.Position));
+                                                        VirtualSnapshotPoint newEnd;
+
+                                                        if (!includesBreak)
+                                                        {
+                                                                newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
+                                                        }
+                                                        else if (endLine.LineNumber + 1 < snapshot.LineCount)
+                                                        {
+                                                                var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
+                                                                newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, nextLine.EndIncludingLineBreak.Position));
+                                                        }
+                                                        else
+                                                        {
+                                                                newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
+                                                        }
+
+                                                        var span = s.IsReversed
+                                                                ? new VirtualSnapshotSpan(newEnd, newStart)
+                                                                : new VirtualSnapshotSpan(newStart, newEnd);
+                                                        newSelections.Add(new Microsoft.VisualStudio.Text.Selection(span, s.IsReversed));
+                                                }
+
+                                                if (newSelections.Any())
+                                                {
+                                                        broker.ClearSecondarySelections();
+                                                        var first = newSelections.First();
+                                                        view.Selection.Select(new SnapshotSpan(first.Start.Position, first.End.Position), first.IsReversed);
+                                                        foreach (var sel in newSelections.Skip(1))
+                                                        {
+                                                                broker.AddSelection(sel);
+                                                        }
+                                                }
+                                                return true;
+                                        }
 
 				case 'd':
 					DeleteSelection(view, broker);
@@ -132,16 +168,20 @@ namespace VsHelix
 					// at the start of the deleted region by the editor. No further action is needed.
 					return true;
 
-				case 'c':
-					DeleteSelection(view, broker);
-					// After the edit is applied, the selections are automatically collapsed
-					// at the start of the deleted region by the editor.
-					ModeManager.Instance.EnterInsert();
+                                case 'c':
+                                        DeleteSelection(view, broker);
+                                        // After the edit is applied, the selections are automatically collapsed
+                                        // at the start of the deleted region by the editor.
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
+
+				case 'p':
+					PasteFromClipboard(view, broker);
 					return true;
 
-				case 'C':
-					AddCaretBelowLastSelection(view, broker);
-					return true;
+                               case 'C':
+                                       AddCaretBelowLastSelection(view, broker);
+                                       return true;
 
 				case ',':
 					broker.ClearSecondarySelections();
@@ -300,11 +340,11 @@ namespace VsHelix
 		/// </summary>
 		/// <param name="view">The text view.</param>
 		/// <param name="broker">The multi-selection broker.</param>
-		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
-		{
-			// Create a single edit to group all deletions into one undo transaction.
-			using (var edit = view.TextBuffer.CreateEdit())
-			{
+                private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
+                {
+                        // Create a single edit to group all deletions into one undo transaction.
+                        using (var edit = view.TextBuffer.CreateEdit())
+                        {
 				// Iterate over each selection managed by the broker.
 				broker.PerformActionOnAllSelections(transformer =>
 				{
@@ -328,8 +368,37 @@ namespace VsHelix
 					}
 				});
 				// Apply all queued deletions to the buffer.
-				edit.Apply();
-			}
+                                edit.Apply();
+                        }
+                }
+
+		/// <summary>
+		/// Pastes clipboard text after each selection.
+		/// Inserts on a new line when the text ends with a newline.
+		/// </summary>
+		private void PasteFromClipboard(ITextView view, IMultiSelectionBroker broker)
+		{
+		        if (!Clipboard.ContainsText())
+		                return;
+
+		        string text = Clipboard.GetText();
+		        bool linewise = text.EndsWith("\r\n") || text.EndsWith("\n");
+
+		        using (var edit = view.TextBuffer.CreateEdit())
+		        {
+		                broker.PerformActionOnAllSelections(sel =>
+		                {
+		                        var point = sel.Selection.End.Position;
+		                        if (linewise)
+		                        {
+		                                var line = point.GetContainingLine();
+		                                point = line.EndIncludingLineBreak;
+		                        }
+		                        edit.Insert(point.Position, text);
+		                });
+
+		                edit.Apply();
+		        }
 		}
 
 		/// <summary>
