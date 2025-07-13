@@ -47,3 +47,4 @@ each caret and `O` to open one above.  Both commands switch to insert mode at
 the newly inserted line with the indentation of the surrounding text.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
+Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.
