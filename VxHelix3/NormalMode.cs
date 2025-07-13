@@ -142,7 +142,11 @@ namespace VxHelix3
 				case 'C':
 					AddCaretBelowLastSelection(view, broker);
 					return true;
-			}
+
+				case ',':
+					broker.ClearSecondarySelections();
+					return true;
+                        }
 
 			return true;
 		}
