@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="VxHelix3.d3f99754-99da-4c55-a0d9-d9dc25cfb096" Version="1.0" Language="en-US" Publisher="Publisher name" />
-    <DisplayName>VxHelix3</DisplayName>
+    <Identity Id="VsHelix.d3f99754-99da-4c55-a0d9-d9dc25cfb096" Version="1.0" Language="en-US" Publisher="Publisher name" />
+    <DisplayName>VsHelix</DisplayName>
     <Description>VisualStudio.Extensibility Extension with VSSDK Compatibility.</Description>
     <Preview>true</Preview>
   </Metadata>
@@ -24,6 +24,6 @@
     <!-- Existing VsPackage asset for the extension -->
     <Asset Type="Microsoft.VisualStudio.VsPackage" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
     <!-- New asset to ensure MEF exports are loaded -->
-    <Asset Type="Microsoft.VisualStudio.MefComponent" Path="VxHelix3.dll" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" Path="VsHelix.dll" />
   </Assets>
 </PackageManifest>

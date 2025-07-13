@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Utilities;
 
-namespace VxHelix3
+namespace VsHelix
 {
 	/// <summary>
 	/// Defines the contract for a mode handler.

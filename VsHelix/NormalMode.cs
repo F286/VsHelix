@@ -11,9 +11,9 @@ using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Operations;
-using VxHelix3;
+using VsHelix;
 
-namespace VxHelix3
+namespace VsHelix
 {
 	/// <summary>
 	/// Handles key input when in Normal mode.

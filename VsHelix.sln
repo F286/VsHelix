@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36221.1 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VxHelix3", "VxHelix3\VxHelix3.csproj", "{59666F82-FAAD-470D-B296-003075A2A812}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VsHelix", "VsHelix\VsHelix.csproj", "{59666F82-FAAD-470D-B296-003075A2A812}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

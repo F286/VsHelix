@@ -1,7 +1,7 @@
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace VxHelix3
+namespace VsHelix
 {
     internal static class StatusBarHelper
     {
