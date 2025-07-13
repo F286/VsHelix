@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Extensibility;
 
-namespace VxHelix3
+namespace VsHelix
 {
     /// <summary>
     /// Extension entrypoint for the VisualStudio.Extensibility extension.

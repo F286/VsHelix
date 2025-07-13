@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.Shell;
 
-namespace VxHelix3
+namespace VsHelix
 {
     public sealed class ModeManager
     {

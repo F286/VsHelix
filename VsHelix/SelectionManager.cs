@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace VxHelix3
+namespace VsHelix
 {
 	/// <summary>
 	/// A data structure to hold the tracking points and direction of a single selection.

@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Utilities;
 
-namespace VxHelix3
+namespace VsHelix
 {
 	[Export(typeof(ICommandHandler))]
 	[ContentType("text")]

@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Utilities; // Add this namespace for IMultiSelectionBroker
 
-namespace VxHelix3
+namespace VsHelix
 {
 	/// <summary>
 	/// Handles key input when in Insert mode.
