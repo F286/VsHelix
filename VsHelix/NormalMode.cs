@@ -13,9 +13,15 @@ using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Operations;
 using VsHelix;
+using System.Text.Json; // For JSON serialization
 
 namespace VsHelix
 {
+	/// <summary>
+	/// Record type for yanked items (replaces tuple for reliable JSON serialization).
+	/// </summary>
+	internal record YankItem(string Text, bool IsLinewise);
+
 	/// <summary>
 	/// Handles key input when in Normal mode.
 	/// </summary>
@@ -144,7 +150,9 @@ namespace VsHelix
 								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
 							}
 
-							var span = new VirtualSnapshotSpan(newStart, newEnd);
+							var span = s.IsReversed
+									? new VirtualSnapshotSpan(newEnd, newStart)
+									: new VirtualSnapshotSpan(newStart, newEnd);
 							newSelections.Add(new Microsoft.VisualStudio.Text.Selection(span, s.IsReversed));
 						}
 
@@ -181,7 +189,7 @@ namespace VsHelix
 					return true;
 
 				case 'p':
-					PasteFromClipboard(view, broker);
+					Paste(view, broker);
 					return true;
 
 				case 'C':
@@ -378,7 +386,24 @@ namespace VsHelix
 		}
 
 		/// <summary>
-		/// Copies the current selections to the clipboard.
+		/// Determines if a selection is linewise (exactly covers one or more full lines).
+		/// </summary>
+		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection s, ITextSnapshot snapshot)
+		{
+			if (s.IsEmpty || s.Start.IsInVirtualSpace || s.End.IsInVirtualSpace)
+			{
+				return false; // Not linewise if empty or in virtual space
+			}
+
+			var startLine = s.Start.Position.GetContainingLine();
+			var endLine = s.End.Position.GetContainingLine();
+
+			return s.Start.Position == startLine.Start &&
+				   s.End.Position == endLine.EndIncludingLineBreak;
+		}
+
+		/// <summary>
+		/// Yanks the current selections to the internal register and system clipboard.
 		/// </summary>
 		private void YankSelections(ITextView view, IMultiSelectionBroker broker)
 		{
@@ -387,46 +412,95 @@ namespace VsHelix
 			if (selections.Count == 0)
 				return;
 
-			var builder = new StringBuilder();
-			for (int i = 0; i < selections.Count; i++)
+			List<YankItem> yankRegister = new List<YankItem>();
+
+			var concatenated = new StringBuilder();
+			foreach (var sel in selections)
 			{
-				var sel = selections[i];
 				var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
-				builder.Append(span.GetText());
-				if (i < selections.Count - 1)
-					builder.AppendLine();
+				var text = span.GetText();
+				var isLinewise = IsLinewiseSelection(sel, snapshot);
+				yankRegister.Add(new YankItem(text, isLinewise));
+
+				concatenated.Append(text);
 			}
 
-			Clipboard.SetText(builder.ToString());
+			// Prepare clean concatenated text for plain clipboard
+			var clipboardText = concatenated.ToString();
+			if (yankRegister.All(r => r.IsLinewise) && !clipboardText.EndsWith(Environment.NewLine))
+				clipboardText += Environment.NewLine;
+
+			// Use DataObject for multiple formats
+			var dataObject = new DataObject();
+			dataObject.SetText(clipboardText); // Plain text for external apps
+
+			// Custom format: Serialize the register as JSON
+			string json = JsonSerializer.Serialize(yankRegister);
+			dataObject.SetData("MyVsHelixYankFormat", json);
+
+			Clipboard.SetDataObject(dataObject);
 		}
 
 		/// <summary>
-		/// Pastes clipboard text after each selection.
-		/// Inserts on a new line when the text ends with a newline.
+		/// Pastes from the internal register if available, or from clipboard with custom format fallback,
+		/// or basic text fallback.
 		/// </summary>
-		private void PasteFromClipboard(ITextView view, IMultiSelectionBroker broker)
+		private void Paste(ITextView view, IMultiSelectionBroker broker)
 		{
-			if (!Clipboard.ContainsText())
+			var currentSelections = broker.AllSelections.ToList();
+			if (currentSelections.Count == 0)
 				return;
 
-			string text = Clipboard.GetText();
-			bool linewise = text.EndsWith("\r\n") || text.EndsWith("\n");
+			List<YankItem> items = null;
 
+			// Check clipboard for custom format or plain text
+			IDataObject dataObject = Clipboard.GetDataObject();
+			if (dataObject != null)
+			{
+				if (dataObject.GetDataPresent("MyVsHelixYankFormat"))
+				{
+					// Deserialize custom data
+					string json = (string)dataObject.GetData("MyVsHelixYankFormat");
+					items = JsonSerializer.Deserialize<List<YankItem>>(json);
+				}
+				else if (dataObject.GetDataPresent(DataFormats.Text))
+				{
+					// Basic fallback: Treat as single item
+					string text = (string)dataObject.GetData(DataFormats.Text);
+					bool isLinewise = text.EndsWith(Environment.NewLine);
+					items = new List<YankItem> { new YankItem(text, isLinewise) };
+				}
+			}
+
+			if (items == null || items.Count == 0)
+				return;
+
+			// Perform the paste (distributed if multiple items)
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
-				broker.PerformActionOnAllSelections(sel =>
+				for (int i = 0; i < currentSelections.Count; i++)
 				{
-					var point = sel.Selection.End.Position;
-					if (linewise)
-					{
-						var line = point.GetContainingLine();
-						point = line.EndIncludingLineBreak;
-					}
-					edit.Insert(point.Position, text);
-				});
+					var sel = currentSelections[i];
+					var yankIndex = i % items.Count; // Cycle if more selections than items
+					var item = items[yankIndex];
 
+					SnapshotPoint insertionPoint;
+					if (item.IsLinewise)
+					{
+						var line = sel.End.Position.GetContainingLine();
+						insertionPoint = line.EndIncludingLineBreak; // New line below
+					}
+					else
+					{
+						insertionPoint = sel.End.Position; // Inline after
+					}
+
+					edit.Insert(insertionPoint.Position, item.Text);
+				}
 				edit.Apply();
 			}
+
+			// Optional: Move carets to end of pasted text (implement if desired)
 		}
 
 		/// <summary>
