@@ -173,20 +173,36 @@ namespace VsHelix
 					YankSelections(view, broker);
 					return true;
 
-				case 'd':
-					YankSelections(view, broker);
-					DeleteSelection(view, broker);
-					// After the edit is applied, the selections are automatically collapsed
-					// at the start of the deleted region by the editor. No further action is needed.
-					return true;
+                                case 'd':
+                                        var altDown = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
+                                        if (!altDown)
+                                        {
+                                                YankSelections(view, broker);
+                                        }
+                                        DeleteSelection(view, broker);
+                                        // After the edit is applied, the selections are automatically collapsed
+                                        // at the start of the deleted region by the editor. No further action is needed.
+                                        return true;
 
-				case 'c':
-					YankSelections(view, broker);
-					DeleteSelection(view, broker);
-					// After the edit is applied, the selections are automatically collapsed
-					// at the start of the deleted region by the editor.
-					ModeManager.Instance.EnterInsert();
-					return true;
+                                case 'c':
+                                        altDown = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
+                                        if (!altDown)
+                                        {
+                                                YankSelections(view, broker);
+                                        }
+                                        DeleteSelection(view, broker);
+                                        // After the edit is applied, the selections are automatically collapsed
+                                        // at the start of the deleted region by the editor.
+                                        ModeManager.Instance.EnterInsert();
+                                        return true;
+
+                                case 'u':
+                                        operations.Undo();
+                                        return true;
+
+                                case 'U':
+                                        operations.Redo();
+                                        return true;
 
 				case 'p':
 					Paste(view, broker);
