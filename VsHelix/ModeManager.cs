@@ -1,5 +1,8 @@
 ﻿using System;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Extensibility.Editor;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
 
 namespace VsHelix
 {
@@ -21,17 +24,19 @@ namespace VsHelix
         // --- Your existing class members ---
         public enum EditorMode { Normal, Insert }
         public EditorMode Current { get; private set; } = EditorMode.Normal;
-
-        public void EnterInsert()
-        {
-            Current = EditorMode.Insert;
-            StatusBarHelper.ShowMode(Current);
-        }
-
-        public void EnterNormal()
-        {
-            Current = EditorMode.Normal;
-            StatusBarHelper.ShowMode(Current);
-        }
+		
+		public void EnterInsert(ITextView view, IMultiSelectionBroker broker)
+		{
+		Current = EditorMode.Insert;
+		StatusBarHelper.ShowMode(Current);
+		CaretHelper.DisplayInsertCarets(view, broker);
+		}
+		
+		public void EnterNormal(ITextView view, IMultiSelectionBroker broker)
+		{
+		Current = EditorMode.Normal;
+		StatusBarHelper.ShowMode(Current);
+		CaretHelper.DisplayInsertCarets(view, broker);
+		}
     }
 }

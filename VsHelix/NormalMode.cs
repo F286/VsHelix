@@ -85,31 +85,31 @@ namespace VsHelix
 			_commandMap['i'] = (args, view, broker, ops) =>
 			{
 				// Enter Insert mode at the start of each selection.
-				SelectionManager.Instance.SaveSelections(broker);
-				broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionStart(sel));
-				ModeManager.Instance.EnterInsert();
+SelectionManager.Instance.SaveSelections(broker);
+broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionStart(sel));
+ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
 			_commandMap['a'] = (args, view, broker, ops) =>
 			{
 				// Enter Insert mode at the end of each selection (append).
-				SelectionManager.Instance.SaveSelections(broker);
-				broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionEnd(sel));
-				ModeManager.Instance.EnterInsert();
+SelectionManager.Instance.SaveSelections(broker);
+broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionEnd(sel));
+ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
 			_commandMap['o'] = (args, view, broker, ops) =>
 			{
 				// Open a new line *below* each selection and enter Insert mode.
-				AddLine(view, broker, ops, above: false);
-				ModeManager.Instance.EnterInsert();
+AddLine(view, broker, ops, above: false);
+ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
 			_commandMap['O'] = (args, view, broker, ops) =>
 			{
 				// Open a new line *above* each selection and enter Insert mode.
-				AddLine(view, broker, ops, above: true);
-				ModeManager.Instance.EnterInsert();
+AddLine(view, broker, ops, above: true);
+ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
 			_commandMap['x'] = (args, view, broker, ops) =>
@@ -198,7 +198,7 @@ namespace VsHelix
 
 			if (switchToInsert)
 			{
-				ModeManager.Instance.EnterInsert();
+ModeManager.Instance.EnterInsert(view, broker);
 			}
 			return true;
 		}
