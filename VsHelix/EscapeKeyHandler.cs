@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Extensibility;
+using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
@@ -45,7 +46,7 @@ namespace VsHelix
 				}
 
 				// Now that the selection is handled, switch the mode.
-				ModeManager.Instance.EnterNormal();
+ModeManager.Instance.EnterNormal(view, broker);
 				return true; // Command was handled.
 			}
 

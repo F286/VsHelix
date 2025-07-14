@@ -16,9 +16,7 @@ command handler and will grow into a small set of core commands.
    `Ctrl+Alt+Click` to place additional carets.
 5. Press `w` to extend each caret to the start of the next word.
 6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
-7. When in normal mode the caret highlights the character under it. Moving with
-   `h`, `j`, `k`, `l`, the arrow keys or by clicking the mouse keeps this
-   single-character selection.
+7. Carets display as thin vertical bars in both modes for a consistent insert-style look.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
