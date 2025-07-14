@@ -14,16 +14,16 @@ namespace VsHelix
 	[TextViewRole(PredefinedTextViewRoles.Editable)]
 	[Name(nameof(EscapeKeyHandler))]
 	[Order(Before = "TypeChar")]
-	[VisualStudioContribution] 
-        internal sealed class EscapeKeyHandler : ICommandHandler<EscapeKeyCommandArgs>
-        {
-                private readonly ICompletionBroker _completionBroker;
+	[VisualStudioContribution]
+	internal sealed class EscapeKeyHandler : ICommandHandler<EscapeKeyCommandArgs>
+	{
+		private readonly ICompletionBroker _completionBroker;
 
-                [ImportingConstructor]
-                public EscapeKeyHandler(ICompletionBroker completionBroker)
-                {
-                        _completionBroker = completionBroker;
-                }
+		[ImportingConstructor]
+		public EscapeKeyHandler(ICompletionBroker completionBroker)
+		{
+			_completionBroker = completionBroker;
+		}
 		public string DisplayName => "Helix Escape Handler";
 
 		public CommandState GetCommandState(EscapeKeyCommandArgs args)
@@ -31,12 +31,12 @@ namespace VsHelix
 
 		public bool ExecuteCommand(EscapeKeyCommandArgs args, CommandExecutionContext context)
 		{
-                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
-                        {
-                                var view = args.TextView;
-                                _completionBroker.DismissAllSessions(view);
-                                // Get the TextView from the command arguments (args), not the context.
-                                var broker = view.GetMultiSelectionBroker();
+			if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+			{
+				var view = args.TextView;
+				_completionBroker.DismissAllSessions(view);
+				// Get the TextView from the command arguments (args), not the context.
+				var broker = view.GetMultiSelectionBroker();
 
 				// Check if the SelectionManager has selections waiting to be restored.
 				if (SelectionManager.Instance.HasSavedSelections)
@@ -46,7 +46,7 @@ namespace VsHelix
 				}
 
 				// Now that the selection is handled, switch the mode.
-ModeManager.Instance.EnterNormal(view, broker);
+				ModeManager.Instance.EnterNormal(view, broker);
 				return true; // Command was handled.
 			}
 
