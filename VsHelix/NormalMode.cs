@@ -12,301 +12,385 @@ using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Operations;
-using VsHelix;
-using System.Text.Json; // For JSON serialization
+using System.Text.Json;  // For JSON serialization
 
 namespace VsHelix
 {
 	/// <summary>
-	/// Record type for yanked items (replaces tuple for reliable JSON serialization).
+	/// Record type for yanked items (used for reliable JSON serialization of yank registers).
 	/// </summary>
 	internal record YankItem(string Text, bool IsLinewise);
 
 	/// <summary>
-	/// Handles key input when in Normal mode.
+	/// Handles key input when in Normal mode. 
+	/// Refactored to use a key-to-command map (Helix-style) for maintainability.
 	/// </summary>
 	internal sealed class NormalMode : IInputMode
 	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+		/// <summary>
+		/// Delegate for handling a Normal mode command.
+		/// </summary>
+		private delegate bool CommandHandler(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
+
+		// Map from typed character to its command handler.
+		private readonly Dictionary<char, CommandHandler> _commandMap;
+
+		public NormalMode()
 		{
-			switch (args.TypedChar)
+			_commandMap = new Dictionary<char, CommandHandler>();
+
+			// ** Movement commands keymap (single-key movements) **
+			var movementCommands = new Dictionary<char, Action<ISelectionTransformer>>
 			{
-				case 'i':
-					// Save the current selections before entering insert mode.
-					SelectionManager.Instance.SaveSelections(broker);
+				// Basic cursor movements
+				['h'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition),  // Move left
+				['j'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToNextLine),             // Move down
+				['k'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine),         // Move up
+				['l'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition),    // Move right
 
-					// For the 'insert' command, we move the caret to the start of each selection.
-					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionStart(selection));
-					ModeManager.Instance.EnterInsert();
+				// Word-wise movements (clear selection then extend)
+				['w'] = sel =>
+				{
+					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+					sel.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
+				},  // Next sub-word
+				['W'] = sel =>
+				{
+					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+					sel.PerformAction(PredefinedSelectionTransformations.SelectToNextWord);
+				},  // Next Word
+				['b'] = sel =>
+				{
+					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+					sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousSubWord);
+				},  // Previous sub-word
+				['B'] = sel =>
+				{
+					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+					sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
+				}   // Previous Word
+			};
+
+			// Register all movement commands to the command map.
+			foreach (var kvp in movementCommands)
+			{
+				_commandMap[kvp.Key] = (args, view, broker, ops) =>
+				{
+					broker.PerformActionOnAllSelections(kvp.Value);
 					return true;
-
-				case 'a':
-					// Save the current selections before entering insert mode.
-					SelectionManager.Instance.SaveSelections(broker);
-
-					// For the 'append' command, move the caret to the end of the selection.
-					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionEnd(selection));
-					ModeManager.Instance.EnterInsert();
-					return true;
-
-				case 'o':
-					AddLine(view, broker, operations, above: false);
-					ModeManager.Instance.EnterInsert();
-					return true;
-
-				case 'O':
-					AddLine(view, broker, operations, above: true);
-					ModeManager.Instance.EnterInsert();
-					return true;
-
-				case 'w':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
-					});
-					return true;
-
-				case 'h':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
-					});
-					return true;
-
-				case 'j':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
-					});
-					return true;
-
-				case 'k':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
-					});
-					return true;
-
-				case 'l':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
-					});
-					return true;
-
-				case 'W':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToNextWord);
-					});
-					return true;
-
-				case 'b':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousSubWord);
-					});
-					return true;
-
-				case 'B':
-					broker.PerformActionOnAllSelections(selection =>
-					{
-						selection.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-						selection.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
-					});
-					return true;
-
-				case 'x':
-					// Use PerformActionOnAllSelections to modify selections in place.
-					// This is less disruptive and helps preserve caret context better than
-					// clearing and re-adding selections.
-					broker.PerformActionOnAllSelections(transformer =>
-					{
-						var snapshot = view.TextSnapshot;
-						var currentSelection = transformer.Selection;
-						var startLine = currentSelection.Start.Position.GetContainingLine();
-						var endLine = currentSelection.End.Position.GetContainingLine();
-
-						// A linewise selection is now defined as covering the line's content,
-						// but NOT the line break. This prevents adjacent selections from merging.
-						bool isAlreadyLinewise = currentSelection.Start.Position == startLine.Start &&
-													 currentSelection.End.Position == endLine.End;
-
-						VirtualSnapshotPoint newStart, newEnd;
-
-						if (!isAlreadyLinewise)
-						{
-							// Select the current line(s) fully, up to the end of the text content.
-							newStart = new VirtualSnapshotPoint(startLine.Start);
-							newEnd = new VirtualSnapshotPoint(endLine.End);
-						}
-						else
-						{
-							// If it's already a line selection, extend to the next line.
-							if (endLine.LineNumber + 1 < snapshot.LineCount)
-							{
-								var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
-								newStart = new VirtualSnapshotPoint(startLine.Start);
-								newEnd = new VirtualSnapshotPoint(nextLine.End);
-							}
-							else
-							{
-								// Already at the last line, do not extend further.
-								newStart = new VirtualSnapshotPoint(startLine.Start);
-								newEnd = new VirtualSnapshotPoint(endLine.End);
-							}
-						}
-
-						// Create the new selection span, preserving the original direction.
-						var newSpan = new VirtualSnapshotSpan(newStart, newEnd);
-
-						// Use MoveTo to set the new selection span.
-						transformer.MoveTo(newSpan.Start, false, PositionAffinity.Successor);
-						transformer.MoveTo(newSpan.End, true, PositionAffinity.Successor);
-					});
-					return true;
-
-				case 'y':
-					YankSelections(view, broker);
-					return true;
-
-                                case 'd':
-                                        var altDown = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
-                                        if (!altDown)
-                                        {
-                                                YankSelections(view, broker);
-                                        }
-                                        DeleteSelection(view, broker);
-                                        // After the edit is applied, the selections are automatically collapsed
-                                        // at the start of the deleted region by the editor. No further action is needed.
-                                        return true;
-
-                                case 'c':
-                                        altDown = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
-                                        if (!altDown)
-                                        {
-                                                YankSelections(view, broker);
-                                        }
-                                        DeleteSelection(view, broker);
-                                        // After the edit is applied, the selections are automatically collapsed
-                                        // at the start of the deleted region by the editor.
-                                        ModeManager.Instance.EnterInsert();
-                                        return true;
-
-                                case 'u':
-                                        operations.Undo();
-                                        return true;
-
-                                case 'U':
-                                        operations.Redo();
-                                        return true;
-
-				case 'p':
-					Paste(view, broker);
-					return true;
-
-				case 'C':
-					AddCaretBelowLastSelection(view, broker);
-					return true;
-
-				case ',':
-					broker.ClearSecondarySelections();
-					return true;
+				};
 			}
 
+			// ** Other normal-mode commands **
+			_commandMap['i'] = (args, view, broker, ops) =>
+			{
+				// Enter Insert mode at the start of each selection.
+				SelectionManager.Instance.SaveSelections(broker);
+				broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionStart(sel));
+				ModeManager.Instance.EnterInsert();
+				return true;
+			};
+			_commandMap['a'] = (args, view, broker, ops) =>
+			{
+				// Enter Insert mode at the end of each selection (append).
+				SelectionManager.Instance.SaveSelections(broker);
+				broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionEnd(sel));
+				ModeManager.Instance.EnterInsert();
+				return true;
+			};
+			_commandMap['o'] = (args, view, broker, ops) =>
+			{
+				// Open a new line *below* each selection and enter Insert mode.
+				AddLine(view, broker, ops, above: false);
+				ModeManager.Instance.EnterInsert();
+				return true;
+			};
+			_commandMap['O'] = (args, view, broker, ops) =>
+			{
+				// Open a new line *above* each selection and enter Insert mode.
+				AddLine(view, broker, ops, above: true);
+				ModeManager.Instance.EnterInsert();
+				return true;
+			};
+			_commandMap['x'] = (args, view, broker, ops) =>
+			{
+				// Extend selection to full lines, or extend linewise selection to the next line.
+				broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
+				return true;
+			};
+			_commandMap['y'] = (args, view, broker, ops) =>
+			{
+				// Yank (copy) current selections.
+				YankSelections(view, broker);
+				return true;
+			};
+			_commandMap['d'] = (args, view, broker, ops) =>
+			{
+				// Delete selection (and yank unless Alt is held).
+				return ExecuteDeleteCommand(view, broker, switchToInsert: false);
+			};
+			_commandMap['c'] = (args, view, broker, ops) =>
+			{
+				// Change (delete then enter Insert mode, and yank unless Alt is held).
+				return ExecuteDeleteCommand(view, broker, switchToInsert: true);
+			};
+			_commandMap['u'] = (args, view, broker, ops) =>
+			{
+				// Undo last edit.
+				//ops.Undo();
+				return true;
+			};
+			_commandMap['U'] = (args, view, broker, ops) =>
+			{
+				// Redo last undone edit.
+				//ops.Redo();
+				return true;
+			};
+			_commandMap['p'] = (args, view, broker, ops) =>
+			{
+				// Paste from yank register/clipboard.
+				Paste(view, broker);
+				return true;
+			};
+			_commandMap['C'] = (args, view, broker, ops) =>
+			{
+				// Add a new caret below the last selection (multi-cursor).
+				AddCaretBelowLastSelection(view, broker);
+				return true;
+			};
+			_commandMap[','] = (args, view, broker, ops) =>
+			{
+				// Clear all secondary selections, keeping only the primary.
+				broker.ClearSecondarySelections();
+				return true;
+			};
+		}
+
+		/// <summary>
+		/// Handles a typed character command in Normal mode by dispatching to the appropriate action.
+		/// </summary>
+		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+		{
+			if (_commandMap.TryGetValue(args.TypedChar, out var handler))
+			{
+				// Found a command for this key – execute it.
+				return handler(args, view, broker, operations);
+			}
+
+			// Unrecognized key in Normal mode: do nothing (but consume the input to prevent insertion).
 			return true;
 		}
 
+		/// <summary>
+		/// Executes a delete/change command: yanks selections (unless Alt is pressed), deletes them, and optionally enters Insert mode.
+		/// </summary>
+		/// <param name="switchToInsert">If true, enters Insert mode after deletion (for 'c' command).</param>
+		private bool ExecuteDeleteCommand(ITextView view, IMultiSelectionBroker broker, bool switchToInsert)
+		{
+			bool altDown = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
+			if (!altDown)
+			{
+				// Yank (copy) selections to register, unless Alt is held.
+				YankSelections(view, broker);
+			}
+
+			DeleteSelection(view, broker);
+
+			if (switchToInsert)
+			{
+				ModeManager.Instance.EnterInsert();
+			}
+			return true;
+		}
+
+		/// <summary>
+		/// Moves the caret to the start of the selection, collapsing the selection.
+		/// </summary>
+		private void MoveCaretToSelectionStart(ISelectionTransformer selection)
+		{
+			var startPoint = selection.Selection.Start;
+			// Collapse selection to its start.
+			selection.MoveTo(startPoint, false, PositionAffinity.Successor);
+		}
+
+		/// <summary>
+		/// Moves the caret to the end of the selection, collapsing the selection.
+		/// </summary>
+		private void MoveCaretToSelectionEnd(ISelectionTransformer selection)
+		{
+			var endPoint = selection.Selection.End;
+			// Collapse selection to its end.
+			selection.MoveTo(endPoint, false, PositionAffinity.Successor);
+		}
+
+		/// <summary>
+		/// Extends a selection to whole lines. If the selection is already linewise, extend it to include the next line.
+		/// </summary>
+		private void ExtendSelectionLinewise(ISelectionTransformer transformer, ITextView view)
+		{
+			var snapshot = view.TextSnapshot;
+			var currentSelection = transformer.Selection;
+			var startLine = currentSelection.Start.Position.GetContainingLine();
+			var endLine = currentSelection.End.Position.GetContainingLine();
+
+			// A linewise selection is defined as covering the full line content (excluding the line break).
+			bool isAlreadyLinewise = currentSelection.Start.Position == startLine.Start &&
+									  currentSelection.End.Position == endLine.End;
+
+			VirtualSnapshotPoint newStart, newEnd;
+			if (!isAlreadyLinewise)
+			{
+				// Not currently linewise: expand selection to cover the entire line(s) content.
+				newStart = new VirtualSnapshotPoint(startLine.Start);
+				newEnd = new VirtualSnapshotPoint(endLine.End);
+			}
+			else
+			{
+				// Already a full-line selection: extend to include the next line (if available).
+				if (endLine.LineNumber + 1 < snapshot.LineCount)
+				{
+					var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
+					newStart = new VirtualSnapshotPoint(startLine.Start);
+					newEnd = new VirtualSnapshotPoint(nextLine.End);
+				}
+				else
+				{
+					// At last line – cannot extend further, so remain on the same lines.
+					newStart = new VirtualSnapshotPoint(startLine.Start);
+					newEnd = new VirtualSnapshotPoint(endLine.End);
+				}
+			}
+
+			// Apply the new span (preserve original selection direction).
+			var newSpan = new VirtualSnapshotSpan(newStart, newEnd);
+			transformer.MoveTo(newSpan.Start, false, PositionAffinity.Successor);
+			transformer.MoveTo(newSpan.End, true, PositionAffinity.Successor);
+		}
+
+		/// <summary>
+		/// Inserts a new blank line above or below each selection (preserving indentation) and positions the caret on that new line.
+		/// </summary>
+		/// <param name="above">True to insert above each selection; false to insert below.</param>
+		private void AddLine(ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, bool above)
+		{
+			var snapshot = view.TextBuffer.CurrentSnapshot;
+			var insertionPoints = new List<ITrackingPoint>();
+			var indents = new List<string>();
+
+			// Determine insertion points and indent strings for each selection.
+			broker.PerformActionOnAllSelections(selection =>
+			{
+				var line = selection.Selection.ActivePoint.Position.GetContainingLine();
+				var lineText = line.GetText();
+				// Capture the leading whitespace (indentation) of the current line.
+				var indent = lineText.Substring(0, lineText.Length - lineText.TrimStart().Length);
+				indents.Add(indent);
+
+				// Calculate position: start of line (for above) or end of line (for below).
+				int pos = above ? line.Start.Position : line.End.Position;
+				insertionPoints.Add(snapshot.CreateTrackingPoint(pos, PointTrackingMode.Negative));
+			});
+
+			// Insert newline(s) with proper indent at each calculated insertion point.
+			using (var edit = view.TextBuffer.CreateEdit())
+			{
+				for (int i = 0; i < insertionPoints.Count; i++)
+				{
+					var tp = insertionPoints[i];
+					var indent = indents[i];
+					string textToInsert = above
+						? indent + Environment.NewLine       // insert a new line above, with same indent
+						: Environment.NewLine + indent;      // insert a new line below, with same indent
+					edit.Insert(tp.GetPosition(snapshot), textToInsert);
+				}
+				edit.Apply();
+			}
+
+			// After insertion, move each selection’s caret to the beginning of the inserted line.
+			var newSnapshot = view.TextBuffer.CurrentSnapshot;
+			int index = 0;
+			broker.PerformActionOnAllSelections(selection =>
+			{
+				// Calculate the caret position on the new line (after indent).
+				int pos = insertionPoints[index].GetPosition(newSnapshot);
+				string indent = indents[index++];
+				int offset = above ? indent.Length : Environment.NewLine.Length + indent.Length;
+				var caretPosition = new SnapshotPoint(newSnapshot, pos + offset);
+				selection.MoveTo(new VirtualSnapshotPoint(caretPosition), false, PositionAffinity.Successor);
+			});
+		}
+
+		/// <summary>
+		/// Adds a new caret below the last selection, aligning it vertically with the original selection’s start/end.
+		/// </summary>
 		private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
 		{
-			// Find the bottom-most selection
+			// Find the bottom-most selection (last in document order).
 			var bottomSelection = broker.AllSelections
-				.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber)
-				.ThenByDescending(s => s.End.Position.Position)
-				.FirstOrDefault();
-
+										.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber)
+										.ThenByDescending(s => s.End.Position.Position)
+										.FirstOrDefault();
 			if (bottomSelection == null)
-			{
 				return;
-			}
 
 			ITextSnapshot snapshot = view.TextSnapshot;
 			var startPoint = bottomSelection.Start;
 			var endPoint = bottomSelection.End;
-
 			var startLine = startPoint.Position.GetContainingLine();
 			var endLine = endPoint.Position.GetContainingLine();
 
 			if (startLine.LineNumber != endLine.LineNumber)
 			{
-				// For now, only handle single-line selections.
+				// For simplicity, only duplicate carets for single-line selections.
 				return;
 			}
 
-			// Get the text from the original line
+			// Get original line text and compute expanded (tab-expanded) text length for alignment.
 			string originalLineText = startLine.GetText();
-			// Calculate tab-expanded text lengths
 			string expandedText = originalLineText.Replace("\t", new string(' ', view.Options.GetTabSize()));
 
-			// Calculate visual offsets (accounting for tabs)
-			int startOffset = CalculateExpandedOffset(
-				originalLineText.Substring(0, startPoint.Position - startLine.Start),
-				view.Options.GetTabSize());
-
-			int endOffset = CalculateExpandedOffset(
-				originalLineText.Substring(0, endPoint.Position - startLine.Start),
-				view.Options.GetTabSize());
-
-			// Add virtual spaces
+			// Calculate visual offsets of selection start and end within the line (accounting for tabs and virtual spaces).
+			int startOffset = CalculateExpandedOffset(originalLineText.Substring(0, startPoint.Position - startLine.Start), view.Options.GetTabSize());
+			int endOffset = CalculateExpandedOffset(originalLineText.Substring(0, endPoint.Position - startLine.Start), view.Options.GetTabSize());
+			// Include virtual space in the offset calculations.
 			startOffset += startPoint.VirtualSpaces;
 			endOffset += endPoint.VirtualSpaces;
 
-			// Find a suitable line below that has enough length
+			// Find a line below that has enough length to accommodate the selection at these offsets.
 			int nextLineNumber = endLine.LineNumber + 1;
-			ITextSnapshotLine nextLine = null;
-			int maxNeededOffset = Math.Max(startOffset, endOffset);
-
+			ITextSnapshotLine targetLine = null;
+			int requiredOffset = Math.Max(startOffset, endOffset);
 			while (nextLineNumber < snapshot.LineCount)
 			{
 				var candidateLine = snapshot.GetLineFromLineNumber(nextLineNumber);
-				string candidateText = candidateLine.GetText();
-
-				// Calculate the expanded length of this line
-				int expandedLineLength = CalculateExpandedOffset(candidateText, view.Options.GetTabSize());
-
-				// Check if this line has enough length to accommodate our selection
-				if (expandedLineLength >= maxNeededOffset)
+				int candidateLength = CalculateExpandedOffset(candidateLine.GetText(), view.Options.GetTabSize());
+				if (candidateLength >= requiredOffset)
 				{
-					nextLine = candidateLine;
+					targetLine = candidateLine;
 					break;
 				}
-
-				// Line is too short, try the next one
 				nextLineNumber++;
 			}
-
-			if (nextLine == null)
+			if (targetLine == null)
 			{
-				return; // No suitable line found
+				// No suitable line found below; cannot add a caret aligned to the selection.
+				return;
 			}
 
-			// Create positions on the next line at the same visual offsets
-			var newStartPoint = CreatePointAtVisualOffset(nextLine, startOffset, view.Options.GetTabSize());
-			var newEndPoint = CreatePointAtVisualOffset(nextLine, endOffset, view.Options.GetTabSize());
+			// Create points on the target line corresponding to the original selection's start/end visual offsets.
+			var newStartPoint = CreatePointAtVisualOffset(targetLine, startOffset, view.Options.GetTabSize());
+			var newEndPoint = CreatePointAtVisualOffset(targetLine, endOffset, view.Options.GetTabSize());
 
-			// Create new selection with the same direction as the original
+			// Form a new selection on the target line with the same orientation (direction) as the original.
 			var newSelection = bottomSelection.IsReversed
-				? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)
-				: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);
+				? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)   // reversed selection
+				: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);  // forward selection
 
 			broker.AddSelection(newSelection);
 		}
 
 		/// <summary>
-		/// Calculates the expanded length of text after replacing tabs with spaces.
+		/// Calculates the expanded length of a text segment after replacing tabs with spaces (for alignment calculations).
 		/// </summary>
 		private int CalculateExpandedOffset(string text, int tabSize)
 		{
@@ -315,7 +399,7 @@ namespace VsHelix
 			{
 				if (c == '\t')
 				{
-					// Calculate how many spaces this tab represents
+					// Each tab advances to the next multiple of tabSize.
 					int spacesForTab = tabSize - (expandedLength % tabSize);
 					expandedLength += spacesForTab;
 				}
@@ -328,7 +412,7 @@ namespace VsHelix
 		}
 
 		/// <summary>
-		/// Creates a virtual point at a specific visual offset on a line, accounting for tabs.
+		/// Creates a virtual snapshot point at a given visual offset into a line (accounts for tabs and returns a point with virtual spaces if needed).
 		/// </summary>
 		private VirtualSnapshotPoint CreatePointAtVisualOffset(ITextSnapshotLine line, int visualOffset, int tabSize)
 		{
@@ -336,7 +420,7 @@ namespace VsHelix
 			int currentVisualOffset = 0;
 			int charOffset = 0;
 
-			// Calculate which character position corresponds to the visual offset
+			// Iterate through characters until reaching the desired visual offset.
 			while (charOffset < lineText.Length && currentVisualOffset < visualOffset)
 			{
 				if (lineText[charOffset] == '\t')
@@ -351,47 +435,43 @@ namespace VsHelix
 
 				if (currentVisualOffset <= visualOffset)
 				{
+					// Only advance char index if we haven't yet surpassed the target visual offset.
 					charOffset++;
 				}
 			}
 
-			// Calculate virtual spaces needed
+			// Any remaining offset distance is virtual space beyond end of line.
 			int virtualSpaces = visualOffset - currentVisualOffset;
 			if (virtualSpaces < 0) virtualSpaces = 0;
 
-			// Create the point at the appropriate position
-			var snapshotPoint = new SnapshotPoint(line.Snapshot, line.Start.Position + charOffset);
-			return new VirtualSnapshotPoint(snapshotPoint, virtualSpaces);
+			// Create a snapshot point at the computed character position and attach virtual spaces.
+			var basePoint = new SnapshotPoint(line.Snapshot, line.Start.Position + charOffset);
+			return new VirtualSnapshotPoint(basePoint, virtualSpaces);
 		}
 
 		/// <summary>
-		/// Deletes the content of all non-empty selections.
+		/// Deletes the content of all non-empty selections from the buffer.
 		/// </summary>
-		/// <param name="view">The text view.</param>
-		/// <param name="broker">The multi-selection broker.</param>
 		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
 		{
-			// A stable list of selections is needed before modification.
+			// Take a stable snapshot of current selections before modifying the buffer.
 			var selections = broker.AllSelections.ToList();
-			if (!selections.Any()) return;
+			if (!selections.Any())
+				return;
 
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
-				// Iterate over the stable list. Order doesn't strictly matter since
-				// all deletions are based on the snapshot before the edit is applied,
-				// but reverse is a safe pattern.
+				// Delete each selection (process in reverse order for safety in overlapping scenarios).
 				foreach (var sel in selections.OrderByDescending(s => s.Start.Position))
 				{
 					if (sel.IsEmpty) continue;
 
+					// Determine span to delete.
 					var spanToDelete = new SnapshotSpan(sel.Start.Position, sel.End.Position);
-
-					// If the selection is linewise (based on our new definition),
-					// we must extend the span to include the line break for a clean delete.
+					// If selection covers whole line content (linewise), include the line break in deletion.
 					if (IsLinewiseSelection(sel, view.TextSnapshot))
 					{
 						var endLine = sel.End.Position.GetContainingLine();
-						// Only extend if there is a line break to include.
 						if (endLine.End.Position < endLine.EndIncludingLineBreak.Position)
 						{
 							spanToDelete = new SnapshotSpan(sel.Start.Position, endLine.EndIncludingLineBreak);
@@ -402,38 +482,30 @@ namespace VsHelix
 				edit.Apply();
 			}
 
-			// After deletion, the editor collapses selections. We should ensure they are
-			// collapsed to a zero-width caret at the start of the deleted region.
+			// After deletion, collapse any remaining selections to a single caret at the start of the deleted range.
 			broker.PerformActionOnAllSelections(transformer =>
 			{
-				// Collapse to start: move both anchor and active to the start point.
 				var start = transformer.Selection.Start;
 				transformer.MoveTo(start, false, PositionAffinity.Successor);
 			});
 		}
 
 		/// <summary>
-		/// Determines if a selection is linewise.
-		/// UPDATED: A linewise selection now spans from the exact start of a line to the
-		/// exact end of its content (excluding the line break). This prevents adjacent
-		/// linewise selections from being merged by the editor.
+		/// Checks if a selection spans whole lines (from the start of a line to the end of that line’s content).
 		/// </summary>
-		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection s, ITextSnapshot snapshot)
+		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
 		{
-			if (s.IsEmpty || s.Start.IsInVirtualSpace || s.End.IsInVirtualSpace)
-			{
+			if (sel.IsEmpty || sel.Start.IsInVirtualSpace || sel.End.IsInVirtualSpace)
 				return false;
-			}
 
-			var startLine = s.Start.Position.GetContainingLine();
-			var endLine = s.End.Position.GetContainingLine();
-
-			// The new definition for a linewise selection.
-			return s.Start.Position == startLine.Start && s.End.Position == endLine.End;
+			var startLine = sel.Start.Position.GetContainingLine();
+			var endLine = sel.End.Position.GetContainingLine();
+			// True if the selection starts at line beginning and ends exactly at line content end.
+			return sel.Start.Position == startLine.Start && sel.End.Position == endLine.End;
 		}
 
 		/// <summary>
-		/// Yanks the current selections to the internal register and system clipboard.
+		/// Yanks (copies) the current selections to both an internal register and the system clipboard.
 		/// </summary>
 		private void YankSelections(ITextView view, IMultiSelectionBroker broker)
 		{
@@ -442,38 +514,37 @@ namespace VsHelix
 			if (selections.Count == 0)
 				return;
 
-			List<YankItem> yankRegister = new List<YankItem>();
+			var yankRegister = new List<YankItem>();
+			var concatenatedText = new StringBuilder();
 
-			var concatenated = new StringBuilder();
 			foreach (var sel in selections)
 			{
+				// Get the text covered by the selection.
 				var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
-				var text = span.GetText();
-				var isLinewise = IsLinewiseSelection(sel, snapshot);
+				string text = span.GetText();
+				bool isLinewise = IsLinewiseSelection(sel, snapshot);
 
-				// If the selection was linewise, we must add the newline back to the yanked text,
-				// since our selection definition now excludes it.
+				// If selection was linewise, append a newline (since selection excluded the line break).
 				if (isLinewise)
 				{
 					text += Environment.NewLine;
 				}
 
 				yankRegister.Add(new YankItem(text, isLinewise));
-				concatenated.Append(text);
+				concatenatedText.Append(text);
 			}
 
-			// Prepare clean concatenated text for plain clipboard
-			var clipboardText = concatenated.ToString();
-			if (yankRegister.Any(r => r.IsLinewise) && !clipboardText.EndsWith(Environment.NewLine))
+			// Prepare clipboard data (add a trailing newline if any yanked content was linewise and missing final newline).
+			string clipboardText = concatenatedText.ToString();
+			if (yankRegister.Any(item => item.IsLinewise) && !clipboardText.EndsWith(Environment.NewLine))
 			{
 				clipboardText += Environment.NewLine;
 			}
 
-			// Use DataObject for multiple formats
+			// Create a DataObject to store both plain text and a custom format for yank register.
 			var dataObject = new DataObject();
-			dataObject.SetText(clipboardText); // Plain text for external apps
-
-			// Custom format: Serialize the register as JSON
+			dataObject.SetText(clipboardText);  // plain text format
+												// Custom format: store the yank register as a JSON string.
 			string json = JsonSerializer.Serialize(yankRegister);
 			dataObject.SetData("MyVsHelixYankFormat", json);
 
@@ -483,14 +554,12 @@ namespace VsHelix
 			}
 			catch
 			{
-				// Clipboard operations can fail if another process is holding it.
-				// It's good practice to wrap this in a try-catch block.
+				// Clipboard operation might fail if the clipboard is locked by another process. Swallow exceptions.
 			}
 		}
 
 		/// <summary>
-		/// Pastes from the internal register if available, or from clipboard with custom format fallback,
-		/// or basic text fallback.
+		/// Pastes text from the internal yank register if available; otherwise falls back to system clipboard text.
 		/// </summary>
 		private void Paste(ITextView view, IMultiSelectionBroker broker)
 		{
@@ -498,48 +567,49 @@ namespace VsHelix
 			if (currentSelections.Count == 0)
 				return;
 
-			List<YankItem> items = null;
+			List<YankItem> pasteItems = null;
 
-			// Check clipboard for custom format or plain text
+			// Try to retrieve our custom yank format from the clipboard, else use plain text.
 			IDataObject dataObject = Clipboard.GetDataObject();
 			if (dataObject != null)
 			{
 				if (dataObject.GetDataPresent("MyVsHelixYankFormat"))
 				{
-					// Deserialize custom data
+					// Our yank register format is present – use it.
 					string json = (string)dataObject.GetData("MyVsHelixYankFormat");
-					items = JsonSerializer.Deserialize<List<YankItem>>(json);
+					pasteItems = JsonSerializer.Deserialize<List<YankItem>>(json);
 				}
 				else if (dataObject.GetDataPresent(DataFormats.Text))
 				{
-					// Basic fallback: Treat as single item
+					// Fallback: treat entire clipboard text as one yank item.
 					string text = (string)dataObject.GetData(DataFormats.Text);
 					bool isLinewise = text.EndsWith(Environment.NewLine);
-					items = new List<YankItem> { new YankItem(text, isLinewise) };
+					pasteItems = new List<YankItem> { new YankItem(text, isLinewise) };
 				}
 			}
 
-			if (items == null || items.Count == 0)
+			if (pasteItems == null || pasteItems.Count == 0)
 				return;
 
-			// Perform the paste (distributed if multiple items)
+			// Insert the pasted content at each selection. If more selections than yank items, cycle through yank items.
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
 				for (int i = 0; i < currentSelections.Count; i++)
 				{
 					var sel = currentSelections[i];
-					var yankIndex = i % items.Count; // Cycle if more selections than items
-					var item = items[yankIndex];
+					var item = pasteItems[i % pasteItems.Count];
 
 					SnapshotPoint insertionPoint;
 					if (item.IsLinewise)
 					{
+						// Linewise paste: insert at end-of-line (so content goes on a new line below).
 						var line = sel.End.Position.GetContainingLine();
-						insertionPoint = line.EndIncludingLineBreak; // New line below
+						insertionPoint = line.EndIncludingLineBreak;
 					}
 					else
 					{
-						insertionPoint = sel.End.Position; // Inline after
+						// Characterwise paste: insert at the selection end.
+						insertionPoint = sel.End.Position;
 					}
 
 					edit.Insert(insertionPoint.Position, item.Text);
@@ -547,77 +617,7 @@ namespace VsHelix
 				edit.Apply();
 			}
 
-			// Optional: Move carets to end of pasted text (implement if desired)
-		}
-
-		/// <summary>
-		/// Moves the caret to the start of the selection, collapsing it.
-		/// </summary>
-		/// <param name="selection">The selection transformer for a single selection.</param>
-		private void MoveCaretToSelectionStart(ISelectionTransformer selection)
-		{
-			var targetPoint = selection.Selection.Start;
-			// Move the caret to the start of the selection, collapsing it.
-			selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
-		}
-
-		/// <summary>
-		/// Moves the caret to the end of the selection, collapsing it.
-		/// </summary>
-		/// <param name="selection">The selection transformer for a single selection.</param>
-		private void MoveCaretToSelectionEnd(ISelectionTransformer selection)
-		{
-			var targetPoint = selection.Selection.End;
-			// Move the caret to the end of the selection, collapsing it.
-			selection.MoveTo(targetPoint, false, PositionAffinity.Successor);
-		}
-
-		/// <summary>
-		/// Inserts a new blank line above or below each selection and moves the caret to it.
-		/// </summary>
-		/// <param name="view">The text view.</param>
-		/// <param name="broker">The multi-selection broker.</param>
-		/// <param name="above">True to insert above, false for below.</param>
-		private void AddLine(ITextView view, IMultiSelectionBroker broker, IEditorOperations operations, bool above)
-		{
-			var snapshot = view.TextBuffer.CurrentSnapshot;
-			var insertionPoints = new List<ITrackingPoint>();
-			var indents = new List<string>();
-
-			broker.PerformActionOnAllSelections(selection =>
-			{
-				var line = selection.Selection.ActivePoint.Position.GetContainingLine();
-				var lineText = line.GetText();
-				var indent = lineText.Substring(0, lineText.Length - lineText.TrimStart().Length);
-				indents.Add(indent);
-
-				int pos = above ? line.Start.Position : line.End.Position;
-				var trackingMode = PointTrackingMode.Negative;
-				insertionPoints.Add(snapshot.CreateTrackingPoint(pos, trackingMode));
-			});
-
-			using (var edit = view.TextBuffer.CreateEdit())
-			{
-				int i = 0;
-				foreach (var tp in insertionPoints)
-				{
-					var indent = indents[i++];
-					var text = above ? indent + Environment.NewLine : Environment.NewLine + indent;
-					edit.Insert(tp.GetPosition(snapshot), text);
-				}
-				edit.Apply();
-			}
-
-			var newSnapshot = view.TextBuffer.CurrentSnapshot;
-			int index = 0;
-			broker.PerformActionOnAllSelections(selection =>
-			{
-				var pos = insertionPoints[index].GetPosition(newSnapshot);
-				var indent = indents[index];
-				index++;
-				var offset = above ? indent.Length : Environment.NewLine.Length + indent.Length;
-				selection.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(newSnapshot, pos + offset)), false, PositionAffinity.Successor);
-			});
+			// (Optional enhancement: move each caret to the end of its pasted text, if desired.)
 		}
 	}
 }
