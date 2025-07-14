@@ -120,54 +120,54 @@ namespace VsHelix
 					return true;
 
 				case 'x':
+					// Use PerformActionOnAllSelections to modify selections in place.
+					// This is less disruptive and helps preserve caret context better than
+					// clearing and re-adding selections.
+					broker.PerformActionOnAllSelections(transformer =>
 					{
-						var snapshot = view.TextBuffer.CurrentSnapshot;
-						var currentSelections = broker.AllSelections.ToList();
-						var newSelections = new List<Microsoft.VisualStudio.Text.Selection>();
+						var snapshot = view.TextSnapshot;
+						var currentSelection = transformer.Selection;
+						var startLine = currentSelection.Start.Position.GetContainingLine();
+						var endLine = currentSelection.End.Position.GetContainingLine();
 
-						foreach (var s in currentSelections)
+						// A linewise selection is now defined as covering the line's content,
+						// but NOT the line break. This prevents adjacent selections from merging.
+						bool isAlreadyLinewise = currentSelection.Start.Position == startLine.Start &&
+													 currentSelection.End.Position == endLine.End;
+
+						VirtualSnapshotPoint newStart, newEnd;
+
+						if (!isAlreadyLinewise)
 						{
-							var startLine = s.Start.Position.GetContainingLine();
-							var endLine = s.End.Position.GetContainingLine();
-
-							bool includesBreak = s.Start.Position == startLine.Start &&
-									s.End.Position == endLine.EndIncludingLineBreak;
-
-							var newStart = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, startLine.Start.Position));
-							VirtualSnapshotPoint newEnd;
-
-							if (!includesBreak)
-							{
-								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
-							}
-							else if (endLine.LineNumber + 1 < snapshot.LineCount)
+							// Select the current line(s) fully, up to the end of the text content.
+							newStart = new VirtualSnapshotPoint(startLine.Start);
+							newEnd = new VirtualSnapshotPoint(endLine.End);
+						}
+						else
+						{
+							// If it's already a line selection, extend to the next line.
+							if (endLine.LineNumber + 1 < snapshot.LineCount)
 							{
 								var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
-								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, nextLine.EndIncludingLineBreak.Position));
+								newStart = new VirtualSnapshotPoint(startLine.Start);
+								newEnd = new VirtualSnapshotPoint(nextLine.End);
 							}
 							else
 							{
-								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
-							}
-
-							var span = s.IsReversed
-									? new VirtualSnapshotSpan(newEnd, newStart)
-									: new VirtualSnapshotSpan(newStart, newEnd);
-							newSelections.Add(new Microsoft.VisualStudio.Text.Selection(span, s.IsReversed));
-						}
-
-						if (newSelections.Any())
-						{
-							broker.ClearSecondarySelections();
-							var first = newSelections.First();
-							view.Selection.Select(new SnapshotSpan(first.Start.Position, first.End.Position), first.IsReversed);
-							foreach (var sel in newSelections.Skip(1))
-							{
-								broker.AddSelection(sel);
+								// Already at the last line, do not extend further.
+								newStart = new VirtualSnapshotPoint(startLine.Start);
+								newEnd = new VirtualSnapshotPoint(endLine.End);
 							}
 						}
-						return true;
-					}
+
+						// Create the new selection span, preserving the original direction.
+						var newSpan = new VirtualSnapshotSpan(newStart, newEnd);
+
+						// Use MoveTo to set the new selection span.
+						transformer.MoveTo(newSpan.Start, false, PositionAffinity.Successor);
+						transformer.MoveTo(newSpan.End, true, PositionAffinity.Successor);
+					});
+					return true;
 
 				case 'y':
 					YankSelections(view, broker);
@@ -355,51 +355,65 @@ namespace VsHelix
 		/// <param name="broker">The multi-selection broker.</param>
 		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
 		{
-			// Create a single edit to group all deletions into one undo transaction.
+			// A stable list of selections is needed before modification.
+			var selections = broker.AllSelections.ToList();
+			if (!selections.Any()) return;
+
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
-				// Iterate over each selection managed by the broker.
-				broker.PerformActionOnAllSelections(transformer =>
+				// Iterate over the stable list. Order doesn't strictly matter since
+				// all deletions are based on the snapshot before the edit is applied,
+				// but reverse is a safe pattern.
+				foreach (var sel in selections.OrderByDescending(s => s.Start.Position))
 				{
-					var currentSelection = transformer.Selection;
+					if (sel.IsEmpty) continue;
 
-					if (!currentSelection.IsEmpty)
+					var spanToDelete = new SnapshotSpan(sel.Start.Position, sel.End.Position);
+
+					// If the selection is linewise (based on our new definition),
+					// we must extend the span to include the line break for a clean delete.
+					if (IsLinewiseSelection(sel, view.TextSnapshot))
 					{
-						// Create a new SnapshotSpan from the selection's start and end points.
-						var spanToDelete = new SnapshotSpan(currentSelection.Start.Position, currentSelection.End.Position);
-
-						// If the span exactly covers one or more whole lines,
-						// extend it to include the trailing line break of the last line.
-						var startLine = spanToDelete.Start.GetContainingLine();
-						var endLine = spanToDelete.End.GetContainingLine();
-						if (spanToDelete.Start == startLine.Start && spanToDelete.End == endLine.End)
+						var endLine = sel.End.Position.GetContainingLine();
+						// Only extend if there is a line break to include.
+						if (endLine.End.Position < endLine.EndIncludingLineBreak.Position)
 						{
-							spanToDelete = new SnapshotSpan(spanToDelete.Start, endLine.EndIncludingLineBreak);
+							spanToDelete = new SnapshotSpan(sel.Start.Position, endLine.EndIncludingLineBreak);
 						}
-
-						edit.Delete(spanToDelete);
 					}
-				});
-				// Apply all queued deletions to the buffer.
+					edit.Delete(spanToDelete);
+				}
 				edit.Apply();
 			}
+
+			// After deletion, the editor collapses selections. We should ensure they are
+			// collapsed to a zero-width caret at the start of the deleted region.
+			broker.PerformActionOnAllSelections(transformer =>
+			{
+				// Collapse to start: move both anchor and active to the start point.
+				var start = transformer.Selection.Start;
+				transformer.MoveTo(start, false, PositionAffinity.Successor);
+			});
 		}
 
 		/// <summary>
-		/// Determines if a selection is linewise (exactly covers one or more full lines).
+		/// Determines if a selection is linewise.
+		/// UPDATED: A linewise selection now spans from the exact start of a line to the
+		/// exact end of its content (excluding the line break). This prevents adjacent
+		/// linewise selections from being merged by the editor.
 		/// </summary>
 		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection s, ITextSnapshot snapshot)
 		{
 			if (s.IsEmpty || s.Start.IsInVirtualSpace || s.End.IsInVirtualSpace)
 			{
-				return false; // Not linewise if empty or in virtual space
+				return false;
 			}
 
 			var startLine = s.Start.Position.GetContainingLine();
 			var endLine = s.End.Position.GetContainingLine();
 
-			return s.Start.Position == startLine.Start &&
-				   s.End.Position == endLine.EndIncludingLineBreak;
+			// The new definition for a linewise selection.
+			return s.Start.Position == startLine.Start && s.End.Position == endLine.End;
 		}
 
 		/// <summary>
@@ -420,15 +434,24 @@ namespace VsHelix
 				var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
 				var text = span.GetText();
 				var isLinewise = IsLinewiseSelection(sel, snapshot);
-				yankRegister.Add(new YankItem(text, isLinewise));
 
+				// If the selection was linewise, we must add the newline back to the yanked text,
+				// since our selection definition now excludes it.
+				if (isLinewise)
+				{
+					text += Environment.NewLine;
+				}
+
+				yankRegister.Add(new YankItem(text, isLinewise));
 				concatenated.Append(text);
 			}
 
 			// Prepare clean concatenated text for plain clipboard
 			var clipboardText = concatenated.ToString();
-			if (yankRegister.All(r => r.IsLinewise) && !clipboardText.EndsWith(Environment.NewLine))
+			if (yankRegister.Any(r => r.IsLinewise) && !clipboardText.EndsWith(Environment.NewLine))
+			{
 				clipboardText += Environment.NewLine;
+			}
 
 			// Use DataObject for multiple formats
 			var dataObject = new DataObject();
@@ -438,7 +461,15 @@ namespace VsHelix
 			string json = JsonSerializer.Serialize(yankRegister);
 			dataObject.SetData("MyVsHelixYankFormat", json);
 
-			Clipboard.SetDataObject(dataObject);
+			try
+			{
+				Clipboard.SetDataObject(dataObject, true);
+			}
+			catch
+			{
+				// Clipboard operations can fail if another process is holding it.
+				// It's good practice to wrap this in a try-catch block.
+			}
 		}
 
 		/// <summary>
