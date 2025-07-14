@@ -48,7 +48,9 @@ each caret and `O` to open one above.  Both commands switch to insert mode at
 the newly inserted line with the indentation of the surrounding text.
 Press `p` pastes clipboard text after each selection. When the clipboard content
 ends with a newline it is inserted on its own line; otherwise it is inserted at
-the caret positions.
+the caret positions. Use `y` to yank the current selections to the clipboard.
+The `d` and `c` commands now yank before deleting so that pasted text is
+available afterwards.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
 Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.

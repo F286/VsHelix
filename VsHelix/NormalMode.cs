@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Text;
 using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -162,18 +163,24 @@ namespace VsHelix
                                                 return true;
                                         }
 
-				case 'd':
-					DeleteSelection(view, broker);
-					// After the edit is applied, the selections are automatically collapsed
-					// at the start of the deleted region by the editor. No further action is needed.
-					return true;
+                               case 'y':
+                                       YankSelections(view, broker);
+                                       return true;
 
-                                case 'c':
-                                        DeleteSelection(view, broker);
-                                        // After the edit is applied, the selections are automatically collapsed
-                                        // at the start of the deleted region by the editor.
-                                        ModeManager.Instance.EnterInsert();
-                                        return true;
+                               case 'd':
+                                       YankSelections(view, broker);
+                                       DeleteSelection(view, broker);
+                                       // After the edit is applied, the selections are automatically collapsed
+                                       // at the start of the deleted region by the editor. No further action is needed.
+                                       return true;
+
+                               case 'c':
+                                       YankSelections(view, broker);
+                                       DeleteSelection(view, broker);
+                                       // After the edit is applied, the selections are automatically collapsed
+                                       // at the start of the deleted region by the editor.
+                                       ModeManager.Instance.EnterInsert();
+                                       return true;
 
 				case 'p':
 					PasteFromClipboard(view, broker);
@@ -371,6 +378,29 @@ namespace VsHelix
                                 edit.Apply();
                         }
                 }
+
+/// <summary>
+/// Copies the current selections to the clipboard.
+/// </summary>
+private void YankSelections(ITextView view, IMultiSelectionBroker broker)
+{
+var snapshot = view.TextSnapshot;
+var selections = broker.AllSelections.ToList();
+if (selections.Count == 0)
+return;
+
+var builder = new StringBuilder();
+for (int i = 0; i < selections.Count; i++)
+{
+var sel = selections[i];
+var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
+builder.Append(span.GetText());
+if (i < selections.Count - 1)
+builder.AppendLine();
+}
+
+Clipboard.SetText(builder.ToString());
+}
 
 		/// <summary>
 		/// Pastes clipboard text after each selection.
