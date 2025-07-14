@@ -19,10 +19,6 @@ command handler and will grow into a small set of core commands.
 7. When in normal mode the caret highlights the character under it. Moving with
    `h`, `j`, `k`, `l`, the arrow keys or by clicking the mouse keeps this
    single-character selection.
-8. Commands like `d` or `a` also treat a lone caret as selecting the character
-   under it, so operations always act on at least one character. The highlight
-   is drawn by the extension without expanding the actual selection, avoiding
-   Visual Studio's multi-occurrence highlight.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it

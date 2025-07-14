@@ -45,8 +45,8 @@ namespace VsHelix
 				}
 
 				// Now that the selection is handled, switch the mode.
-                               ModeManager.Instance.EnterNormal();
-                               return true; // Command was handled.
+				ModeManager.Instance.EnterNormal();
+				return true; // Command was handled.
 			}
 
 			// In normal mode, also cancel 'esc' keys as that would clear multiple selections.

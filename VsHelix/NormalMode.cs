@@ -169,13 +169,13 @@ namespace VsHelix
 		/// <summary>
 		/// Handles a typed character command in Normal mode by dispatching to the appropriate action.
 		/// </summary>
-                public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-                {
-                        if (_commandMap.TryGetValue(args.TypedChar, out var handler))
-                        {
-                                // Found a command for this key – execute it.
-                                return handler(args, view, broker, operations);
-                        }
+		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+		{
+			if (_commandMap.TryGetValue(args.TypedChar, out var handler))
+			{
+				// Found a command for this key – execute it.
+				return handler(args, view, broker, operations);
+			}
 
 			// Unrecognized key in Normal mode: do nothing (but consume the input to prevent insertion).
 			return true;
@@ -462,9 +462,12 @@ namespace VsHelix
 			using (var edit = view.TextBuffer.CreateEdit())
 			{
 				// Delete each selection (process in reverse order for safety in overlapping scenarios).
-                               foreach (var sel in selections.OrderByDescending(s => s.Start.Position))
-                               {
-                                       var spanToDelete = SelectionUtilities.GetEffectiveSpan(sel, view.TextSnapshot);
+				foreach (var sel in selections.OrderByDescending(s => s.Start.Position))
+				{
+					if (sel.IsEmpty) continue;
+
+					// Determine span to delete.
+					var spanToDelete = new SnapshotSpan(sel.Start.Position, sel.End.Position);
 					// If selection covers whole line content (linewise), include the line break in deletion.
 					if (IsLinewiseSelection(sel, view.TextSnapshot))
 					{
@@ -517,8 +520,8 @@ namespace VsHelix
 			foreach (var sel in selections)
 			{
 				// Get the text covered by the selection.
-                               var span = SelectionUtilities.GetEffectiveSpan(sel, snapshot);
-                               string text = span.GetText();
+				var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
+				string text = span.GetText();
 				bool isLinewise = IsLinewiseSelection(sel, snapshot);
 
 				// If selection was linewise, append a newline (since selection excluded the line break).
