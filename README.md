@@ -39,12 +39,18 @@ or using `VSIXInstaller.exe`.
 
 The extension includes a `HelixCommandHandler` implementing basic motions like
 `w` for word forward as well as `h`, `j`, `k`, and `l` for left, down, up, and
-right movement across all selections.  The `x` key selects the current line or
-extends the selection to the next line when pressed repeatedly.  Pressing `C`
+right movement across all selections.  The `x` key selects the current line
+including its trailing newline and extends to the next line when pressed
+repeatedly.  Pressing `C`
 copies the current selection to the line below while <kbd>Alt</kbd>+`C`
 duplicates the selection on the line above.  Use `o` to open a new line below
 each caret and `O` to open one above.  Both commands switch to insert mode at
 the newly inserted line with the indentation of the surrounding text.
+Press `p` pastes clipboard text after each selection. When the clipboard content
+ends with a newline it is inserted on its own line; otherwise it is inserted at
+the caret positions. Use `y` to yank the current selections to the clipboard.
+The `d` and `c` commands now yank before deleting so that pasted text is
+available afterwards.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
 Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.
