@@ -43,10 +43,51 @@ namespace VsHelix
 			var movementCommands = new Dictionary<char, Action<ISelectionTransformer>>
 			{
 				// Basic cursor movements
-				['h'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition),  // Move left
+
+				// Move left
+				['h'] = sel =>
+				{
+					if (sel.Selection.IsEmpty)
+					{
+						sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+					}
+					else
+					{
+						if (sel.Selection.IsReversed)
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+						}
+						else
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+						}
+					}
+				},
+				// Move right
+				['l'] = sel =>
+				{
+					if (sel.Selection.IsEmpty)
+					{
+						sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+					}
+					else
+					{
+						if (sel.Selection.IsReversed)
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+						}
+						else
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+						}
+					}
+				},
 				['j'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToNextLine),             // Move down
 				['k'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine),         // Move up
-				['l'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition),    // Move right
 
 				// Word-wise movements (clear selection then extend)
 				['w'] = sel =>
