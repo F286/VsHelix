@@ -113,87 +113,85 @@ namespace VsHelix
 					});
 					return true;
 
-                                case 'x':
-                                        {
-                                                var snapshot = view.TextBuffer.CurrentSnapshot;
-                                                var currentSelections = broker.AllSelections.ToList();
-                                                var newSelections = new List<Microsoft.VisualStudio.Text.Selection>();
+				case 'x':
+					{
+						var snapshot = view.TextBuffer.CurrentSnapshot;
+						var currentSelections = broker.AllSelections.ToList();
+						var newSelections = new List<Microsoft.VisualStudio.Text.Selection>();
 
-                                                foreach (var s in currentSelections)
-                                                {
-                                                        var startLine = s.Start.Position.GetContainingLine();
-                                                        var endLine = s.End.Position.GetContainingLine();
+						foreach (var s in currentSelections)
+						{
+							var startLine = s.Start.Position.GetContainingLine();
+							var endLine = s.End.Position.GetContainingLine();
 
-                                                        bool includesBreak = s.Start.Position == startLine.Start &&
-                                                                s.End.Position == endLine.EndIncludingLineBreak;
+							bool includesBreak = s.Start.Position == startLine.Start &&
+									s.End.Position == endLine.EndIncludingLineBreak;
 
-                                                        var newStart = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, startLine.Start.Position));
-                                                        VirtualSnapshotPoint newEnd;
+							var newStart = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, startLine.Start.Position));
+							VirtualSnapshotPoint newEnd;
 
-                                                        if (!includesBreak)
-                                                        {
-                                                                newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
-                                                        }
-                                                        else if (endLine.LineNumber + 1 < snapshot.LineCount)
-                                                        {
-                                                                var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
-                                                                newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, nextLine.EndIncludingLineBreak.Position));
-                                                        }
-                                                        else
-                                                        {
-                                                                newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
-                                                        }
+							if (!includesBreak)
+							{
+								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
+							}
+							else if (endLine.LineNumber + 1 < snapshot.LineCount)
+							{
+								var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
+								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, nextLine.EndIncludingLineBreak.Position));
+							}
+							else
+							{
+								newEnd = new VirtualSnapshotPoint(new SnapshotPoint(snapshot, endLine.EndIncludingLineBreak.Position));
+							}
 
-                                                        var span = s.IsReversed
-                                                                ? new VirtualSnapshotSpan(newEnd, newStart)
-                                                                : new VirtualSnapshotSpan(newStart, newEnd);
-                                                        newSelections.Add(new Microsoft.VisualStudio.Text.Selection(span, s.IsReversed));
-                                                }
+							var span = new VirtualSnapshotSpan(newStart, newEnd);
+							newSelections.Add(new Microsoft.VisualStudio.Text.Selection(span, s.IsReversed));
+						}
 
-                                                if (newSelections.Any())
-                                                {
-                                                        broker.ClearSecondarySelections();
-                                                        var first = newSelections.First();
-                                                        view.Selection.Select(new SnapshotSpan(first.Start.Position, first.End.Position), first.IsReversed);
-                                                        foreach (var sel in newSelections.Skip(1))
-                                                        {
-                                                                broker.AddSelection(sel);
-                                                        }
-                                                }
-                                                return true;
-                                        }
+						if (newSelections.Any())
+						{
+							broker.ClearSecondarySelections();
+							var first = newSelections.First();
+							view.Selection.Select(new SnapshotSpan(first.Start.Position, first.End.Position), first.IsReversed);
+							foreach (var sel in newSelections.Skip(1))
+							{
+								broker.AddSelection(sel);
+							}
+						}
+						return true;
+					}
 
-                               case 'y':
-                                       YankSelections(view, broker);
-                                       return true;
+				case 'y':
+					YankSelections(view, broker);
+					return true;
 
-                               case 'd':
-                                       YankSelections(view, broker);
-                                       DeleteSelection(view, broker);
-                                       // After the edit is applied, the selections are automatically collapsed
-                                       // at the start of the deleted region by the editor. No further action is needed.
-                                       return true;
+				case 'd':
+					YankSelections(view, broker);
+					DeleteSelection(view, broker);
+					// After the edit is applied, the selections are automatically collapsed
+					// at the start of the deleted region by the editor. No further action is needed.
+					return true;
 
-                               case 'c':
-                                       YankSelections(view, broker);
-                                       DeleteSelection(view, broker);
-                                       // After the edit is applied, the selections are automatically collapsed
-                                       // at the start of the deleted region by the editor.
-                                       ModeManager.Instance.EnterInsert();
-                                       return true;
+				case 'c':
+					YankSelections(view, broker);
+					DeleteSelection(view, broker);
+					// After the edit is applied, the selections are automatically collapsed
+					// at the start of the deleted region by the editor.
+					ModeManager.Instance.EnterInsert();
+					return true;
 
 				case 'p':
 					PasteFromClipboard(view, broker);
 					return true;
 
-                               case 'C':
-                                       AddCaretBelowLastSelection(view, broker);
-                                       return true;
+				case 'C':
+					AddCaretBelowLastSelection(view, broker);
+					return true;
 
 				case ',':
 					broker.ClearSecondarySelections();
 					return true;
-                        }
+			}
 
 			return true;
 		}
@@ -228,16 +226,16 @@ namespace VsHelix
 			string originalLineText = startLine.GetText();
 			// Calculate tab-expanded text lengths
 			string expandedText = originalLineText.Replace("\t", new string(' ', view.Options.GetTabSize()));
-			
+
 			// Calculate visual offsets (accounting for tabs)
 			int startOffset = CalculateExpandedOffset(
 				originalLineText.Substring(0, startPoint.Position - startLine.Start),
 				view.Options.GetTabSize());
-			
+
 			int endOffset = CalculateExpandedOffset(
 				originalLineText.Substring(0, endPoint.Position - startLine.Start),
 				view.Options.GetTabSize());
-			
+
 			// Add virtual spaces
 			startOffset += startPoint.VirtualSpaces;
 			endOffset += endPoint.VirtualSpaces;
@@ -251,17 +249,17 @@ namespace VsHelix
 			{
 				var candidateLine = snapshot.GetLineFromLineNumber(nextLineNumber);
 				string candidateText = candidateLine.GetText();
-				
+
 				// Calculate the expanded length of this line
 				int expandedLineLength = CalculateExpandedOffset(candidateText, view.Options.GetTabSize());
-				
+
 				// Check if this line has enough length to accommodate our selection
 				if (expandedLineLength >= maxNeededOffset)
 				{
 					nextLine = candidateLine;
 					break;
 				}
-				
+
 				// Line is too short, try the next one
 				nextLineNumber++;
 			}
@@ -313,7 +311,7 @@ namespace VsHelix
 			string lineText = line.GetText();
 			int currentVisualOffset = 0;
 			int charOffset = 0;
-			
+
 			// Calculate which character position corresponds to the visual offset
 			while (charOffset < lineText.Length && currentVisualOffset < visualOffset)
 			{
@@ -326,17 +324,17 @@ namespace VsHelix
 				{
 					currentVisualOffset++;
 				}
-				
+
 				if (currentVisualOffset <= visualOffset)
 				{
 					charOffset++;
 				}
 			}
-			
+
 			// Calculate virtual spaces needed
 			int virtualSpaces = visualOffset - currentVisualOffset;
 			if (virtualSpaces < 0) virtualSpaces = 0;
-			
+
 			// Create the point at the appropriate position
 			var snapshotPoint = new SnapshotPoint(line.Snapshot, line.Start.Position + charOffset);
 			return new VirtualSnapshotPoint(snapshotPoint, virtualSpaces);
@@ -347,11 +345,11 @@ namespace VsHelix
 		/// </summary>
 		/// <param name="view">The text view.</param>
 		/// <param name="broker">The multi-selection broker.</param>
-                private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
-                {
-                        // Create a single edit to group all deletions into one undo transaction.
-                        using (var edit = view.TextBuffer.CreateEdit())
-                        {
+		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
+		{
+			// Create a single edit to group all deletions into one undo transaction.
+			using (var edit = view.TextBuffer.CreateEdit())
+			{
 				// Iterate over each selection managed by the broker.
 				broker.PerformActionOnAllSelections(transformer =>
 				{
@@ -375,32 +373,32 @@ namespace VsHelix
 					}
 				});
 				// Apply all queued deletions to the buffer.
-                                edit.Apply();
-                        }
-                }
+				edit.Apply();
+			}
+		}
 
-/// <summary>
-/// Copies the current selections to the clipboard.
-/// </summary>
-private void YankSelections(ITextView view, IMultiSelectionBroker broker)
-{
-var snapshot = view.TextSnapshot;
-var selections = broker.AllSelections.ToList();
-if (selections.Count == 0)
-return;
+		/// <summary>
+		/// Copies the current selections to the clipboard.
+		/// </summary>
+		private void YankSelections(ITextView view, IMultiSelectionBroker broker)
+		{
+			var snapshot = view.TextSnapshot;
+			var selections = broker.AllSelections.ToList();
+			if (selections.Count == 0)
+				return;
 
-var builder = new StringBuilder();
-for (int i = 0; i < selections.Count; i++)
-{
-var sel = selections[i];
-var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
-builder.Append(span.GetText());
-if (i < selections.Count - 1)
-builder.AppendLine();
-}
+			var builder = new StringBuilder();
+			for (int i = 0; i < selections.Count; i++)
+			{
+				var sel = selections[i];
+				var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
+				builder.Append(span.GetText());
+				if (i < selections.Count - 1)
+					builder.AppendLine();
+			}
 
-Clipboard.SetText(builder.ToString());
-}
+			Clipboard.SetText(builder.ToString());
+		}
 
 		/// <summary>
 		/// Pastes clipboard text after each selection.
@@ -408,27 +406,27 @@ Clipboard.SetText(builder.ToString());
 		/// </summary>
 		private void PasteFromClipboard(ITextView view, IMultiSelectionBroker broker)
 		{
-		        if (!Clipboard.ContainsText())
-		                return;
+			if (!Clipboard.ContainsText())
+				return;
 
-		        string text = Clipboard.GetText();
-		        bool linewise = text.EndsWith("\r\n") || text.EndsWith("\n");
+			string text = Clipboard.GetText();
+			bool linewise = text.EndsWith("\r\n") || text.EndsWith("\n");
 
-		        using (var edit = view.TextBuffer.CreateEdit())
-		        {
-		                broker.PerformActionOnAllSelections(sel =>
-		                {
-		                        var point = sel.Selection.End.Position;
-		                        if (linewise)
-		                        {
-		                                var line = point.GetContainingLine();
-		                                point = line.EndIncludingLineBreak;
-		                        }
-		                        edit.Insert(point.Position, text);
-		                });
+			using (var edit = view.TextBuffer.CreateEdit())
+			{
+				broker.PerformActionOnAllSelections(sel =>
+				{
+					var point = sel.Selection.End.Position;
+					if (linewise)
+					{
+						var line = point.GetContainingLine();
+						point = line.EndIncludingLineBreak;
+					}
+					edit.Insert(point.Position, text);
+				});
 
-		                edit.Apply();
-		        }
+				edit.Apply();
+			}
 		}
 
 		/// <summary>
