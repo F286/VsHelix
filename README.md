@@ -45,3 +45,5 @@ each caret and `O` to open one above.  Both commands switch to insert mode at
 the newly inserted line with the indentation of the surrounding text.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
+The `y` key copies all active selections to the clipboard while `p`
+pastes that text at each caret location.

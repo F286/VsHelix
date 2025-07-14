@@ -134,6 +134,13 @@ namespace VxHelix3
 					// at the start of the deleted region by the editor.
 					ModeManager.Instance.EnterInsert();
 					return true;
+				case 'y':
+					operations.CopySelection();
+					return true;
+
+				case 'p':
+					operations.Paste();
+					return true;
 
 				case 'C':
 					// TODO: This should add an addional caret, on the line right below the lowest caret that exists for any selection
