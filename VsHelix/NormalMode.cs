@@ -18,38 +18,47 @@ namespace VsHelix
 	/// <summary>
 	/// Handles key input when in Normal mode.
 	/// </summary>
-	internal sealed class NormalMode : IInputMode
-	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-		{
+       internal sealed class NormalMode : IInputMode
+       {
+               private readonly ModeManager modeManager;
+               private readonly SelectionManager selectionManager;
+
+               public NormalMode(ModeManager modeManager = null, SelectionManager selectionManager = null)
+               {
+                       this.modeManager = modeManager ?? ModeManager.Instance;
+                       this.selectionManager = selectionManager ?? SelectionManager.Instance;
+               }
+
+               public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+               {
 			switch (args.TypedChar)
 			{
 				case 'i':
 					// Save the current selections before entering insert mode.
-					SelectionManager.Instance.SaveSelections(broker);
+                                        selectionManager.SaveSelections(broker);
 
 					// For the 'insert' command, we move the caret to the start of each selection.
 					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionStart(selection));
-					ModeManager.Instance.EnterInsert();
+                                        modeManager.EnterInsert();
 					return true;
 
 				case 'a':
 					// Save the current selections before entering insert mode.
-					SelectionManager.Instance.SaveSelections(broker);
+                                        selectionManager.SaveSelections(broker);
 
 					// For the 'append' command, move the caret to the end of the selection.
 					broker.PerformActionOnAllSelections(selection => MoveCaretToSelectionEnd(selection));
-					ModeManager.Instance.EnterInsert();
+                                        modeManager.EnterInsert();
 					return true;
 
 				case 'o':
 					AddLine(view, broker, operations, above: false);
-					ModeManager.Instance.EnterInsert();
+                                        modeManager.EnterInsert();
 					return true;
 
 				case 'O':
 					AddLine(view, broker, operations, above: true);
-					ModeManager.Instance.EnterInsert();
+                                        modeManager.EnterInsert();
 					return true;
 
 				case 'w':
@@ -136,7 +145,7 @@ namespace VsHelix
 					DeleteSelection(view, broker);
 					// After the edit is applied, the selections are automatically collapsed
 					// at the start of the deleted region by the editor.
-					ModeManager.Instance.EnterInsert();
+                                        modeManager.EnterInsert();
 					return true;
 
 				case 'C':

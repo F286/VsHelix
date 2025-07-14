@@ -34,8 +34,8 @@ namespace VsHelix
 
 		private List<TrackedSelection> selectionsToRestore;
 
-		// Private constructor to enforce singleton pattern.
-		private SelectionManager() { }
+				// Private constructor to enforce singleton pattern.
+				internal SelectionManager() { }
 
 		/// <summary>
 		/// Gets a value indicating whether there are selections saved and waiting to be restored.

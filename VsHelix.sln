@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36221.1 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VsHelix", "VsHelix\VsHelix.csproj", "{59666F82-FAAD-470D-B296-003075A2A812}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VsHelix.Tests", "VsHelix.Tests\VsHelix.Tests.csproj", "{D60C4BD1-FC7A-4A25-9F8B-55DEF8DC780F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{59666F82-FAAD-470D-B296-003075A2A812}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{59666F82-FAAD-470D-B296-003075A2A812}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{59666F82-FAAD-470D-B296-003075A2A812}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D60C4BD1-FC7A-4A25-9F8B-55DEF8DC780F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D60C4BD1-FC7A-4A25-9F8B-55DEF8DC780F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D60C4BD1-FC7A-4A25-9F8B-55DEF8DC780F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D60C4BD1-FC7A-4A25-9F8B-55DEF8DC780F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
