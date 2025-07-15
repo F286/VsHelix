@@ -54,6 +54,14 @@ namespace VsHelix
 		}
 
 		/// <summary>
+		/// Clears any saved selections without restoring them.
+		/// </summary>
+		public void ClearSelections()
+		{
+			selectionsToRestore = null;
+		}
+
+		/// <summary>
 		/// Restores the previously saved selections onto the editor's current text snapshot.
 		/// </summary>
 		/// <param name="broker">The multi-selection broker for the active view.</param>

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.Json;  // For JSON serialization
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Text;
 using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -12,7 +13,6 @@ using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Operations;
-using System.Text.Json;  // For JSON serialization
 
 namespace VsHelix
 {
@@ -146,32 +146,32 @@ namespace VsHelix
 				ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
-                        _commandMap['O'] = (args, view, broker, ops) =>
-                        {
-                                // Open a new line *above* each selection and enter Insert mode.
-                                AddLine(view, broker, ops, above: true);
-                                ModeManager.Instance.EnterInsert(view, broker);
-                                return true;
-                        };
-                        _commandMap['/'] = (args, view, broker, ops) =>
-                        {
-                                SelectionManager.Instance.SaveSelections(broker);
-                                var spans = GetSearchDomain(view, broker);
-                                ModeManager.Instance.EnterSearch(view, broker, false, spans);
-                                return true;
-                        };
-                        _commandMap['s'] = (args, view, broker, ops) =>
-                        {
-                                SelectionManager.Instance.SaveSelections(broker);
-                                var spans = GetSearchDomain(view, broker);
-                                ModeManager.Instance.EnterSearch(view, broker, true, spans);
-                                return true;
-                        };
-                        _commandMap['x'] = (args, view, broker, ops) =>
-                        {
-                                // Extend selection to full lines, or extend linewise selection to the next line.
-                                broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
-                                return true;
+			_commandMap['O'] = (args, view, broker, ops) =>
+			{
+				// Open a new line *above* each selection and enter Insert mode.
+				AddLine(view, broker, ops, above: true);
+				ModeManager.Instance.EnterInsert(view, broker);
+				return true;
+			};
+			_commandMap['/'] = (args, view, broker, ops) =>
+			{
+				SelectionManager.Instance.SaveSelections(broker);
+				var spans = GetSearchDomain(view, broker);
+				ModeManager.Instance.EnterSearch(view, broker, false, spans);
+				return true;
+			};
+			_commandMap['s'] = (args, view, broker, ops) =>
+			{
+				SelectionManager.Instance.SaveSelections(broker);
+				var spans = GetSearchDomain(view, broker);
+				ModeManager.Instance.EnterSearch(view, broker, true, spans);
+				return true;
+			};
+			_commandMap['x'] = (args, view, broker, ops) =>
+			{
+				// Extend selection to full lines, or extend linewise selection to the next line.
+				broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
+				return true;
 			};
 			_commandMap['y'] = (args, view, broker, ops) =>
 			{
@@ -378,8 +378,8 @@ namespace VsHelix
 		/// <summary>
 		/// Adds a new caret below the last selection, aligning it vertically with the original selection’s start/end.
 		/// </summary>
-                private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
-                {
+		private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
+		{
 			// Find the bottom-most selection (last in document order).
 			var bottomSelection = broker.AllSelections
 										.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber)
@@ -398,67 +398,25 @@ namespace VsHelix
 			{
 				// For simplicity, only duplicate carets for single-line selections.
 				return;
-                }
+			}
 
-                private System.Collections.Generic.List<SnapshotSpan> GetSearchDomain(ITextView view, IMultiSelectionBroker broker)
-                {
-                        var spans = new System.Collections.Generic.List<SnapshotSpan>();
-                        foreach (var sel in broker.AllSelections)
-                        {
-                                if (!sel.IsEmpty)
-                                {
-                                        spans.Add(new SnapshotSpan(sel.Start.Position, sel.End.Position));
-                                }
-                        }
-                        if (spans.Count == 0)
-                        {
-                                spans.Add(new SnapshotSpan(view.TextSnapshot, 0, view.TextSnapshot.Length));
-                        }
-                        return spans;
-                }
+		}
 
-			// Get original line text and compute expanded (tab-expanded) text length for alignment.
-			string originalLineText = startLine.GetText();
-			string expandedText = originalLineText.Replace("\t", new string(' ', view.Options.GetTabSize()));
-
-			// Calculate visual offsets of selection start and end within the line (accounting for tabs and virtual spaces).
-			int startOffset = CalculateExpandedOffset(originalLineText.Substring(0, startPoint.Position - startLine.Start), view.Options.GetTabSize());
-			int endOffset = CalculateExpandedOffset(originalLineText.Substring(0, endPoint.Position - startLine.Start), view.Options.GetTabSize());
-			// Include virtual space in the offset calculations.
-			startOffset += startPoint.VirtualSpaces;
-			endOffset += endPoint.VirtualSpaces;
-
-			// Find a line below that has enough length to accommodate the selection at these offsets.
-			int nextLineNumber = endLine.LineNumber + 1;
-			ITextSnapshotLine targetLine = null;
-			int requiredOffset = Math.Max(startOffset, endOffset);
-			while (nextLineNumber < snapshot.LineCount)
+		private System.Collections.Generic.List<SnapshotSpan> GetSearchDomain(ITextView view, IMultiSelectionBroker broker)
+		{
+			var spans = new System.Collections.Generic.List<SnapshotSpan>();
+			foreach (var sel in broker.AllSelections)
 			{
-				var candidateLine = snapshot.GetLineFromLineNumber(nextLineNumber);
-				int candidateLength = CalculateExpandedOffset(candidateLine.GetText(), view.Options.GetTabSize());
-				if (candidateLength >= requiredOffset)
+				if (!sel.IsEmpty)
 				{
-					targetLine = candidateLine;
-					break;
+					spans.Add(new SnapshotSpan(sel.Start.Position, sel.End.Position));
 				}
-				nextLineNumber++;
 			}
-			if (targetLine == null)
+			if (spans.Count == 0)
 			{
-				// No suitable line found below; cannot add a caret aligned to the selection.
-				return;
+				spans.Add(new SnapshotSpan(view.TextSnapshot, 0, view.TextSnapshot.Length));
 			}
-
-			// Create points on the target line corresponding to the original selection's start/end visual offsets.
-			var newStartPoint = CreatePointAtVisualOffset(targetLine, startOffset, view.Options.GetTabSize());
-			var newEndPoint = CreatePointAtVisualOffset(targetLine, endOffset, view.Options.GetTabSize());
-
-			// Form a new selection on the target line with the same orientation (direction) as the original.
-			var newSelection = bottomSelection.IsReversed
-				? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)   // reversed selection
-				: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);  // forward selection
-
-			broker.AddSelection(newSelection);
+			return spans;
 		}
 
 		/// <summary>
