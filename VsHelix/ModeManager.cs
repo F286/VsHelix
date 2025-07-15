@@ -1,8 +1,10 @@
 ﻿using System;
-using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Extensibility.Editor;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Operations;
 
 namespace VsHelix
 {
@@ -22,8 +24,20 @@ namespace VsHelix
 		public static ModeManager Instance => lazyInstance.Value;
 
 		// --- Your existing class members ---
-		public enum EditorMode { Normal, Insert }
+		public enum EditorMode { Normal, Insert, Search }
 		public EditorMode Current { get; private set; } = EditorMode.Normal;
+
+		private SearchMode? _searchMode;
+		public SearchMode? Search => _searchMode;
+
+		public List<ITrackingSpan> LastSearchSpans { get; set; }
+
+		private ITextSearchService2 GetSearchService()
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			var componentModel = (IComponentModel)ServiceProvider.GlobalProvider.GetService(typeof(SComponentModel));
+			return componentModel.GetService<ITextSearchService2>();
+		}
 
 		public void EnterInsert(ITextView view, IMultiSelectionBroker broker)
 		{
@@ -32,9 +46,18 @@ namespace VsHelix
 			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, false);
 		}
 
+		public void EnterSearch(ITextView view, IMultiSelectionBroker broker, bool selectAll, System.Collections.Generic.List<SnapshotSpan> domain)
+		{
+			Current = EditorMode.Search;
+			_searchMode = new SearchMode(selectAll, view, broker, domain, GetSearchService());
+			StatusBarHelper.ShowMode(Current);
+			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
+		}
+
 		public void EnterNormal(ITextView view, IMultiSelectionBroker broker)
 		{
 			Current = EditorMode.Normal;
+			_searchMode = null;
 			StatusBarHelper.ShowMode(Current);
 			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);  // block caret
 
