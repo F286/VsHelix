@@ -31,12 +31,12 @@ namespace VsHelix
 
 		public bool ExecuteCommand(EscapeKeyCommandArgs args, CommandExecutionContext context)
 		{
-			if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
-			{
-				var view = args.TextView;
-				_completionBroker.DismissAllSessions(view);
-				// Get the TextView from the command arguments (args), not the context.
-				var broker = view.GetMultiSelectionBroker();
+                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+                        {
+                                var view = args.TextView;
+                                _completionBroker.DismissAllSessions(view);
+                                // Get the TextView from the command arguments (args), not the context.
+                                var broker = view.GetMultiSelectionBroker();
 
 				// Check if the SelectionManager has selections waiting to be restored.
 				if (SelectionManager.Instance.HasSavedSelections)
@@ -46,9 +46,20 @@ namespace VsHelix
 				}
 
 				// Now that the selection is handled, switch the mode.
-				ModeManager.Instance.EnterNormal(view, broker);
-				return true; // Command was handled.
-			}
+                                ModeManager.Instance.EnterNormal(view, broker);
+                                return true; // Command was handled.
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search)
+                        {
+                                var view = args.TextView;
+                                var broker = view.GetMultiSelectionBroker();
+                                if (SelectionManager.Instance.HasSavedSelections)
+                                {
+                                        SelectionManager.Instance.RestoreSelections(broker);
+                                }
+                                ModeManager.Instance.EnterNormal(view, broker);
+                                return true;
+                        }
 
 			// In normal mode, also cancel 'esc' keys as that would clear multiple selections.
 			// This prevents Visual Studio's default behavior of collapsing all carets to one.

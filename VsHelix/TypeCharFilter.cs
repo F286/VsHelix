@@ -44,14 +44,18 @@ namespace VsHelix
 			var broker = view.GetMultiSelectionBroker();
 			var ops = _editorOperationsFactory.GetEditorOperations(view);
 			
-			if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
-			{
-				return _normalMode.Handle(args, view, broker, ops);
-			}
-			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
-			{
-				return _insertMode.Handle(args, view, broker, ops);
-			}
+                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
+                        {
+                                return _normalMode.Handle(args, view, broker, ops);
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+                        {
+                                return _insertMode.Handle(args, view, broker, ops);
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
+                        {
+                                return ModeManager.Instance.Search.Handle(args, view, broker, ops);
+                        }
 
 			return false;
 		}

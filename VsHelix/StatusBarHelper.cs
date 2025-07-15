@@ -5,7 +5,7 @@ namespace VsHelix
 {
     internal static class StatusBarHelper
     {
-        public static void ShowMode(ModeManager.EditorMode mode)
+        public static void ShowMode(ModeManager.EditorMode mode, string extra = "")
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var status = ServiceProvider.GlobalProvider.GetService(typeof(SVsStatusbar)) as IVsStatusbar;
@@ -13,9 +13,13 @@ namespace VsHelix
             {
                 ModeManager.EditorMode.Normal => "NOR",
                 ModeManager.EditorMode.Insert => "INS",
+                ModeManager.EditorMode.Search => "SCH",
                 _ => mode.ToString().ToUpperInvariant(),
             };
-            status?.SetText($"{text} ");
+            if (!string.IsNullOrEmpty(extra))
+                status?.SetText($"{text} {extra}");
+            else
+                status?.SetText($"{text} ");
         }
     }
 }

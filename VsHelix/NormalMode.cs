@@ -146,18 +146,32 @@ namespace VsHelix
 				ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
-			_commandMap['O'] = (args, view, broker, ops) =>
-			{
-				// Open a new line *above* each selection and enter Insert mode.
-				AddLine(view, broker, ops, above: true);
-				ModeManager.Instance.EnterInsert(view, broker);
-				return true;
-			};
-			_commandMap['x'] = (args, view, broker, ops) =>
-			{
-				// Extend selection to full lines, or extend linewise selection to the next line.
-				broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
-				return true;
+                        _commandMap['O'] = (args, view, broker, ops) =>
+                        {
+                                // Open a new line *above* each selection and enter Insert mode.
+                                AddLine(view, broker, ops, above: true);
+                                ModeManager.Instance.EnterInsert(view, broker);
+                                return true;
+                        };
+                        _commandMap['/'] = (args, view, broker, ops) =>
+                        {
+                                SelectionManager.Instance.SaveSelections(broker);
+                                var spans = GetSearchDomain(view, broker);
+                                ModeManager.Instance.EnterSearch(view, broker, false, spans);
+                                return true;
+                        };
+                        _commandMap['s'] = (args, view, broker, ops) =>
+                        {
+                                SelectionManager.Instance.SaveSelections(broker);
+                                var spans = GetSearchDomain(view, broker);
+                                ModeManager.Instance.EnterSearch(view, broker, true, spans);
+                                return true;
+                        };
+                        _commandMap['x'] = (args, view, broker, ops) =>
+                        {
+                                // Extend selection to full lines, or extend linewise selection to the next line.
+                                broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
+                                return true;
 			};
 			_commandMap['y'] = (args, view, broker, ops) =>
 			{
@@ -364,8 +378,8 @@ namespace VsHelix
 		/// <summary>
 		/// Adds a new caret below the last selection, aligning it vertically with the original selection’s start/end.
 		/// </summary>
-		private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
-		{
+                private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
+                {
 			// Find the bottom-most selection (last in document order).
 			var bottomSelection = broker.AllSelections
 										.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber)
@@ -384,7 +398,24 @@ namespace VsHelix
 			{
 				// For simplicity, only duplicate carets for single-line selections.
 				return;
-			}
+                }
+
+                private System.Collections.Generic.List<SnapshotSpan> GetSearchDomain(ITextView view, IMultiSelectionBroker broker)
+                {
+                        var spans = new System.Collections.Generic.List<SnapshotSpan>();
+                        foreach (var sel in broker.AllSelections)
+                        {
+                                if (!sel.IsEmpty)
+                                {
+                                        spans.Add(new SnapshotSpan(sel.Start.Position, sel.End.Position));
+                                }
+                        }
+                        if (spans.Count == 0)
+                        {
+                                spans.Add(new SnapshotSpan(view.TextSnapshot, 0, view.TextSnapshot.Length));
+                        }
+                        return spans;
+                }
 
 			// Get original line text and compute expanded (tab-expanded) text length for alignment.
 			string originalLineText = startLine.GetText();
