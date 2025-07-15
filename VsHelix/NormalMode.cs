@@ -266,6 +266,8 @@ namespace VsHelix
 			if (lastSpans == null || lastSpans.Count == 0) return;
 
 			var snapshot = view.TextSnapshot;
+			if (snapshot == null) return;  // Prevent crash if snapshot is unexpectedly null
+
 			var orderedSpans = lastSpans.Select(ts => ts.GetSpan(snapshot)).OrderBy(s => s.Start.Position).ToList();
 
 			var currentPos = view.Caret.Position.BufferPosition.Position;
@@ -285,9 +287,8 @@ namespace VsHelix
 			if (target.HasValue)
 			{
 				broker.ClearSecondarySelections();
-				view.Selection.Select(target.Value, false);
-				view.Caret.MoveTo(target.Value.Start);
-				// Optional: Ensure visible
+				view.Selection.Select(target.Value, true);  // Reversed=true to place caret at start
+															// Optional: Ensure visible
 				view.DisplayTextLineContainingBufferPosition(target.Value.Start, 0, ViewRelativePosition.Top);
 			}
 		}

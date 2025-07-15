@@ -188,7 +188,11 @@ namespace VsHelix
 			// Clear highlights
 			_highlighter.UpdateHighlights(Enumerable.Empty<SnapshotSpan>());
 
-			if (!_selectAllMatches)
+			if (_selectAllMatches)
+			{
+				SelectionManager.Instance.ClearSelections();
+			}
+			else
 			{
 				_broker.ClearSecondarySelections();
 			}
@@ -254,16 +258,18 @@ namespace VsHelix
 			}
 
 			var primary = firstAfterStart ?? matches[0];
-			_view.Selection.Select(primary, false);
+			_view.Selection.Select(primary, true);  // Reversed=true to place caret at start
 
 			if (_selectAllMatches)
 			{
+				List<Microsoft.VisualStudio.Text.Selection> selections = new List<Microsoft.VisualStudio.Text.Selection>();
 				foreach (var m in matches)
 				{
-					if (m != primary)
-					{
-						_broker.AddSelection(new Microsoft.VisualStudio.Text.Selection(new VirtualSnapshotSpan(m)));
-					}
+					_broker.AddSelection(new Microsoft.VisualStudio.Text.Selection(new VirtualSnapshotSpan(m), true));  // Reversed=true	
+				}
+				if (selections.Count > 0)
+				{
+					_broker.SetSelectionRange(selections, selections.First());
 				}
 			}
 
