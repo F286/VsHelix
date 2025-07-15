@@ -60,7 +60,6 @@ namespace VsHelix
 		{
 			StatusBarHelper.ShowMode(ModeManager.EditorMode.Search, _query);
 		}
-
 		private void UpdateMatches()
 		{
 			_broker.ClearSecondarySelections();
@@ -85,14 +84,35 @@ namespace VsHelix
 			}
 
 			var matches = new List<SnapshotSpan>();
-			foreach (var span in _domain)
+			SnapshotSpan? firstAfterStart = null;
+
+			foreach (var domainSpan in _domain)
 			{
-				string text = span.GetText();
-				foreach (Match m in regex.Matches(text))
+				var snapshot = domainSpan.Snapshot;
+				var startLineNum = domainSpan.Start.GetContainingLine().LineNumber;
+				var endLineNum = domainSpan.End.GetContainingLine().LineNumber;
+
+				for (int lineNum = startLineNum; lineNum <= endLineNum; lineNum++)
 				{
-					var start = span.Start + m.Index;
-					var matchSpan = new SnapshotSpan(start, m.Length);
-					matches.Add(matchSpan);
+					var line = snapshot.GetLineFromLineNumber(lineNum);
+					int lineStart = (lineNum == startLineNum) ? Math.Max(0, domainSpan.Start.Position - line.Start.Position) : 0;
+					int lineEnd = (lineNum == endLineNum) ? domainSpan.End.Position - line.Start.Position : line.Length;
+
+					if (lineStart >= lineEnd) continue; // empty line portion
+
+					string lineText = line.GetText().Substring(lineStart, lineEnd - lineStart);
+
+					foreach (Match m in regex.Matches(lineText))
+					{
+						var matchStartPos = line.Start + lineStart + m.Index;
+						var matchSpan = new SnapshotSpan(matchStartPos, m.Length);
+						matches.Add(matchSpan);
+
+						if (!firstAfterStart.HasValue && matchSpan.Start >= _start)
+						{
+							firstAfterStart = matchSpan;
+						}
+					}
 				}
 			}
 
@@ -102,24 +122,20 @@ namespace VsHelix
 				return;
 			}
 
-			matches.Sort((a, b) => a.Start.Position.CompareTo(b.Start.Position));
+			// No sort needed, as matches are collected in document order (lines are sequential)
 
-			SnapshotSpan primary = matches[0];
-			foreach (var m in matches)
-			{
-				if (m.Start >= _start)
-				{
-					primary = m;
-					break;
-				}
-			}
+			SnapshotSpan primary = firstAfterStart ?? matches[0]; // wrap to first if none after start
 
 			_view.Selection.Select(primary, false);
-			foreach (var m in matches)
+
+			if (_selectAll)
 			{
-				if (m != primary)
+				foreach (var m in matches)
 				{
-					_broker.AddSelection(new Microsoft.VisualStudio.Text.Selection(m));
+					if (m != primary)
+					{
+						_broker.AddSelection(new Microsoft.VisualStudio.Text.Selection(m));
+					}
 				}
 			}
 
