@@ -167,6 +167,8 @@ namespace VsHelix
 				ModeManager.Instance.EnterSearch(view, broker, true, spans);
 				return true;
 			};
+			_commandMap['n'] = (args, view, broker, ops) => { CycleMatch(true, view, broker); return true; };
+			_commandMap['N'] = (args, view, broker, ops) => { CycleMatch(false, view, broker); return true; };
 			_commandMap['x'] = (args, view, broker, ops) =>
 			{
 				// Extend selection to full lines, or extend linewise selection to the next line.
@@ -256,6 +258,38 @@ namespace VsHelix
 				ModeManager.Instance.EnterInsert(view, broker);
 			}
 			return true;
+		}
+
+		private void CycleMatch(bool forward, ITextView view, IMultiSelectionBroker broker)
+		{
+			var lastSpans = ModeManager.Instance.LastSearchSpans;
+			if (lastSpans == null || lastSpans.Count == 0) return;
+
+			var snapshot = view.TextSnapshot;
+			var orderedSpans = lastSpans.Select(ts => ts.GetSpan(snapshot)).OrderBy(s => s.Start.Position).ToList();
+
+			var currentPos = view.Caret.Position.BufferPosition.Position;
+
+			SnapshotSpan? target = null;
+			if (forward)
+			{
+				target = orderedSpans.FirstOrDefault(s => s.Start.Position > currentPos);
+				if (!target.HasValue) target = orderedSpans.First();
+			}
+			else
+			{
+				target = orderedSpans.LastOrDefault(s => s.Start.Position < currentPos);
+				if (!target.HasValue) target = orderedSpans.Last();
+			}
+
+			if (target.HasValue)
+			{
+				broker.ClearSecondarySelections();
+				view.Selection.Select(target.Value, false);
+				view.Caret.MoveTo(target.Value.Start);
+				// Optional: Ensure visible
+				view.DisplayTextLineContainingBufferPosition(target.Value.Start, 0, ViewRelativePosition.Top);
+			}
 		}
 
 		/// <summary>
