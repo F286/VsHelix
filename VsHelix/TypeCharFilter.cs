@@ -52,10 +52,14 @@ namespace VsHelix
 			{
 				return _insertMode.Handle(args, view, broker, ops);
 			}
-			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
-			{
-				return ModeManager.Instance.Search.Handle(args, view, broker, ops);
-			}
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
+                        {
+                                return ModeManager.Instance.Search.Handle(args, view, broker, ops);
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Match && ModeManager.Instance.Match != null)
+                        {
+                                return ModeManager.Instance.Match.Handle(args, view, broker, ops);
+                        }
 
 			return false;
 		}

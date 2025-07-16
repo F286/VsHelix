@@ -13,8 +13,9 @@ namespace VsHelix
 			{
 				ModeManager.EditorMode.Normal => "NOR",
 				ModeManager.EditorMode.Insert => "INS",
-				ModeManager.EditorMode.Search => "SCH",
-				_ => mode.ToString().ToUpperInvariant(),
+                                ModeManager.EditorMode.Search => "SCH",
+                                ModeManager.EditorMode.Match => "MAT",
+                                _ => mode.ToString().ToUpperInvariant(),
 			};
 			if (!string.IsNullOrEmpty(extra))
 				status?.SetText($"{text} {extra}");
