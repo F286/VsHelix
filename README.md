@@ -57,4 +57,4 @@ Press `u` to undo and `U` to redo the last action.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
 Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.
-Use `s` to select all matches of a regex typed inline. `/` performs an incremental search that highlights matches as you type. Press **Enter** to accept the search or **Esc** to cancel.
+Use `s` to select all matches of a regex typed inline. `/` performs an incremental search that highlights matches as you type. While searching, `n` and `N` jump to the next or previous match. Press **Enter** to accept the search or **Esc** to cancel.

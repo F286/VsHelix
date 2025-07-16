@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Operations;
+using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
@@ -138,35 +139,49 @@ namespace VsHelix
 		private readonly SnapshotPoint _start;
 		private string _query = string.Empty;
 		private readonly ITextSearchService2 _searchService;
-		private readonly SearchHighlightTagger _highlighter;
+               private readonly SearchHighlightTagger _highlighter;
 
-		public SearchMode(bool selectAll, ITextView view, IMultiSelectionBroker broker, List<SnapshotSpan> domain, ITextSearchService2 searchService)
-		{
-			_selectAllMatches = selectAll;
-			_view = view;
-			_broker = broker;
-			_buffer = view.TextBuffer;
-			_domain = domain;
-			_start = view.Caret.Position.BufferPosition;
-			_searchService = searchService;
+               private delegate bool CommandHandler(TypeCharCommandArgs args);
+               private readonly Dictionary<char, CommandHandler> _commandMap;
 
-			// Get the highlighter tagger from view properties
-			_highlighter = _view.Properties.GetProperty<SearchHighlightTagger>("SearchHighlightTagger");
+               public SearchMode(bool selectAll, ITextView view, IMultiSelectionBroker broker, List<SnapshotSpan> domain, ITextSearchService2 searchService)
+               {
+                       _selectAllMatches = selectAll;
+                       _view = view;
+                       _broker = broker;
+                       _buffer = view.TextBuffer;
+                       _domain = domain;
+                       _start = view.Caret.Position.BufferPosition;
+                       _searchService = searchService;
 
-			UpdateStatus();
-		}
+                       // Get the highlighter tagger from view properties
+                       _highlighter = _view.Properties.GetProperty<SearchHighlightTagger>("SearchHighlightTagger");
 
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-		{
-			char ch = args.TypedChar;
-			if (!char.IsControl(ch))
-			{
-				_query += ch;
-				UpdateMatches();
-			}
-			return true;
-		}
+                       _commandMap = new Dictionary<char, CommandHandler>
+                       {
+                               ['n'] = args => { CycleMatch(true); return true; },
+                               ['N'] = args => { CycleMatch(false); return true; }
+                       };
 
+                       UpdateStatus();
+               }
+
+
+
+               public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+               {
+                       if (_commandMap.TryGetValue(args.TypedChar, out var handler))
+                               return handler(args);
+
+                       char ch = args.TypedChar;
+                       if (!char.IsControl(ch))
+                       {
+                               _query += ch;
+                               UpdateMatches();
+                       }
+                       return true;
+               }
+		
 		public void HandleBackspace()
 		{
 			if (_query.Length > 0)
@@ -178,12 +193,7 @@ namespace VsHelix
 
 		public void Finish()
 		{
-			// Store matches for cycling if not select-all mode and there are matches
-			var matches = GetCurrentMatches(); // Helper to get matches without recalculating
-			if (!_selectAllMatches && matches.Count > 0 && !string.IsNullOrEmpty(_query))
-			{
-				ModeManager.Instance.LastSearchSpans = matches.Select(m => _buffer.CurrentSnapshot.CreateTrackingSpan(m, SpanTrackingMode.EdgeInclusive)).ToList();
-			}
+
 
 			// Clear highlights
 			_highlighter.UpdateHighlights(Enumerable.Empty<SnapshotSpan>());
@@ -273,12 +283,46 @@ namespace VsHelix
 				}
 			}
 
-			UpdateStatus();
+		UpdateStatus();
 		}
-
-		// Helper to retrieve current matches (assuming UpdateMatches can be called to cache if needed; for simplicity, recalculate or add caching if performance issue)
-		private List<SnapshotSpan> GetCurrentMatches()
+		
+		private void CycleMatch(bool forward)
 		{
+		if (string.IsNullOrEmpty(_query))
+		return;
+		
+		var matches = GetCurrentMatches();
+		if (matches.Count == 0)
+		return;
+		
+		var ordered = matches.OrderBy(s => s.Start.Position).ToList();
+		var currentPos = _view.Caret.Position.BufferPosition.Position;
+		
+		SnapshotSpan? target = null;
+		if (forward)
+		{
+		target = ordered.FirstOrDefault(s => s.Start.Position > currentPos);
+		if (!target.HasValue)
+		target = ordered.First();
+		}
+		else
+		{
+		target = ordered.LastOrDefault(s => s.Start.Position < currentPos);
+		if (!target.HasValue)
+		target = ordered.Last();
+		}
+		
+		if (target.HasValue)
+		{
+		_broker.ClearSecondarySelections();
+		_view.Selection.Select(target.Value, true);
+		_view.DisplayTextLineContainingBufferPosition(target.Value.Start, 0, ViewRelativePosition.Top);
+		}
+		}
+		
+				// Helper to retrieve current matches (assuming UpdateMatches can be called to cache if needed; for simplicity, recalculate or add caching if performance issue)
+				private List<SnapshotSpan> GetCurrentMatches()
+				{
 			// For now, recalculate; optimize if needed
 			var findOptions = FindOptions.UseRegularExpressions | FindOptions.MatchCase;
 			var matches = new List<SnapshotSpan>();
