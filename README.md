@@ -47,6 +47,8 @@ copies the current selection to the line below while <kbd>Alt</kbd>+`C`
 duplicates the selection on the line above.  Use `o` to open a new line below
 each caret and `O` to open one above.  Both commands switch to insert mode at
 the newly inserted line with the indentation of the surrounding text.
+Commands are resolved using a small Helix-style keymap per mode, allowing
+multi-key sequences to be added in the future.
 Press `p` pastes clipboard text after each selection. When the clipboard content
 ends with a newline it is inserted on its own line; otherwise it is inserted at
 the caret positions. Use `y` to yank the current selections to the clipboard.
@@ -58,7 +60,7 @@ Type a number before any normal-mode command to repeat it that many times.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
 Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.
-Use `s` to select all matches of a regex typed inline. `/` performs an incremental search that highlights matches as you type. While searching, `n` and `N` jump to the next or previous match. Press **Enter** to accept the search or **Esc** to cancel.
+Use `s` to select all matches of a regex typed inline. `/` performs an incremental search that highlights matches as you type. While searching, `n` and `N` jump to the next or previous match. Press **Enter** to accept the search or **Esc** to cancel. Enter and Backspace are now dispatched through the same keymap as other characters.
 Press `m` to manipulate matching pairs. After entering match mode:
 `m` jumps to the matching bracket, `s <char>` surrounds the selection,
 `r <from><to>` replaces the surrounding characters, `d <char>` removes the

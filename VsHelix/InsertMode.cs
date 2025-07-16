@@ -9,11 +9,11 @@ namespace VsHelix
 	/// <summary>
 	/// Handles key input when in Insert mode.
 	/// </summary>
-	internal sealed class InsertMode : IInputMode
-	{
-		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-		{
-			return false;
-		}
-	}
+       internal sealed class InsertMode : IInputMode
+       {
+               public bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+               {
+                       return false;
+               }
+       }
 }

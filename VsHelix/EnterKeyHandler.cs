@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Extensibility;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
+using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Utilities;
 
 namespace VsHelix
@@ -14,24 +15,32 @@ namespace VsHelix
 	[Name(nameof(EnterKeyHandler))]
 	[Order(Before = "Return")]
 	[VisualStudioContribution]
-	internal sealed class EnterKeyHandler : ICommandHandler<ReturnKeyCommandArgs>
-	{
-		public string DisplayName => "Helix Enter Handler";
+        internal sealed class EnterKeyHandler : ICommandHandler<ReturnKeyCommandArgs>
+        {
+                private readonly IEditorOperationsFactoryService _operationsFactory;
 
-		public CommandState GetCommandState(ReturnKeyCommandArgs args) => CommandState.Available;
+                [ImportingConstructor]
+                public EnterKeyHandler(IEditorOperationsFactoryService operationsFactory)
+                {
+                        _operationsFactory = operationsFactory;
+                }
 
-		public bool ExecuteCommand(ReturnKeyCommandArgs args, CommandExecutionContext context)
-		{
-			if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
-			{
-				if (SelectionManager.Instance.HasSavedSelections)
-				{
-					SelectionManager.Instance.ClearSelections();
-				}
-				ModeManager.Instance.Search.Finish();
-				return true;
-			}
-			return false;
-		}
-	}
+                public string DisplayName => "Helix Enter Handler";
+
+                public CommandState GetCommandState(ReturnKeyCommandArgs args) => CommandState.Available;
+
+                public bool ExecuteCommand(ReturnKeyCommandArgs args, CommandExecutionContext context)
+                {
+                        var view = args.TextView;
+                        var broker = view.GetMultiSelectionBroker();
+                        var ops = _operationsFactory.GetEditorOperations(view);
+
+                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
+                                return ModeManager.Instance.Search.HandleChar('\r', view, broker, ops);
+                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Match && ModeManager.Instance.Match != null)
+                                return ModeManager.Instance.Match.HandleChar('\r', view, broker, ops);
+
+                        return false;
+                }
+        }
 }
