@@ -54,6 +54,7 @@ The `d` and `c` commands yank before deleting so that pasted text is available
 afterwards. Hold <kbd>Alt</kbd> while pressing `d` or `c` to delete without
 copying.
 Press `u` to undo and `U` to redo the last action.
+Type a number before any normal-mode command to repeat it that many times.
 Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
 Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.
