@@ -30,7 +30,6 @@ namespace VsHelix
 		private SearchMode? _searchMode;
 		public SearchMode? Search => _searchMode;
 
-		public List<ITrackingSpan> LastSearchSpans { get; set; }
 
 		private ITextSearchService2 GetSearchService()
 		{
