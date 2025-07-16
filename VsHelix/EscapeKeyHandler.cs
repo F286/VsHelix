@@ -49,17 +49,24 @@ namespace VsHelix
 				ModeManager.Instance.EnterNormal(view, broker);
 				return true; // Command was handled.
 			}
-			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search)
-			{
-				var view = args.TextView;
-				var broker = view.GetMultiSelectionBroker();
-				if (SelectionManager.Instance.HasSavedSelections)
-				{
-					SelectionManager.Instance.RestoreSelections(broker);
-				}
-				ModeManager.Instance.EnterNormal(view, broker);
-				return true;
-			}
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search)
+                        {
+                                var view = args.TextView;
+                                var broker = view.GetMultiSelectionBroker();
+                                if (SelectionManager.Instance.HasSavedSelections)
+                                {
+                                        SelectionManager.Instance.RestoreSelections(broker);
+                                }
+                                ModeManager.Instance.EnterNormal(view, broker);
+                                return true;
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Match)
+                        {
+                                var view = args.TextView;
+                                var broker = view.GetMultiSelectionBroker();
+                                ModeManager.Instance.EnterNormal(view, broker);
+                                return true;
+                        }
 
 			// In normal mode, also cancel 'esc' keys as that would clear multiple selections.
 			// This prevents Visual Studio's default behavior of collapsing all carets to one.
