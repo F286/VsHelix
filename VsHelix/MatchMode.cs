@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualStudio.Extensibility.Editor;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
@@ -12,6 +11,7 @@ internal sealed class MatchMode : IInputMode
 {
 private readonly ITextView _view;
 private readonly IMultiSelectionBroker _broker;
+private readonly Keymap _keymap;
 
 private enum MatchState { AwaitCommand, Surround, ReplaceFirst, ReplaceSecond, Delete, Around, Inside }
 private MatchState _state = MatchState.AwaitCommand;
@@ -43,17 +43,35 @@ public MatchMode(ITextView view, IMultiSelectionBroker broker)
 _view = view;
 _broker = broker;
 StatusBarHelper.ShowMode(ModeManager.EditorMode.Match);
+_keymap = new Keymap();
+_keymap.Add("m", (c, v, b, o) => { _broker.PerformActionOnAllSelections(sel => GoToMatchingBracket(sel)); return Exit(); });
+_keymap.Add("s", (c, v, b, o) => { _state = MatchState.Surround; return true; });
+_keymap.Add("r", (c, v, b, o) => { _state = MatchState.ReplaceFirst; return true; });
+_keymap.Add("d", (c, v, b, o) => { _state = MatchState.Delete; return true; });
+_keymap.Add("a", (c, v, b, o) => { _state = MatchState.Around; return true; });
+_keymap.Add("i", (c, v, b, o) => { _state = MatchState.Inside; return true; });
+_keymap.Add("\u001b", (c, v, b, o) => Exit());
+_keymap.Add("\r", (c, v, b, o) => Exit());
 }
 
-public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+public bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 {
-char ch = args.TypedChar;
 if (char.IsControl(ch))
 return true;
 
+if (_state == MatchState.AwaitCommand)
+{
+if (_keymap.TryGetCommand(ch, out var handler))
+{
+if (handler != null)
+return handler(ch, view, broker, operations);
+return true;
+}
+return Exit();
+}
+
 return _state switch
 {
-MatchState.AwaitCommand => HandleCommand(ch),
 MatchState.Surround => ExitAfter(() => SurroundSelections(ch)),
 MatchState.ReplaceFirst => SetReplaceFrom(ch),
 MatchState.ReplaceSecond => ExitAfter(() => ReplaceSurround(_replaceFrom, ch)),
@@ -64,32 +82,6 @@ _ => Exit()
 };
 }
 
-private bool HandleCommand(char ch)
-{
-switch (ch)
-{
-case 'm':
-_broker.PerformActionOnAllSelections(sel => GoToMatchingBracket(sel));
-return Exit();
-case 's':
-_state = MatchState.Surround;
-return true;
-case 'r':
-_state = MatchState.ReplaceFirst;
-return true;
-case 'd':
-_state = MatchState.Delete;
-return true;
-case 'a':
-_state = MatchState.Around;
-return true;
-case 'i':
-_state = MatchState.Inside;
-return true;
-default:
-return Exit();
-}
-}
 
 private bool SetReplaceFrom(char ch)
 {
@@ -122,7 +114,7 @@ if (pos.Position > 0 && TryGetPair(snapshot[pos.Position - 1], out var before) &
 {
 int match = FindMatch(snapshot, pos.Position - 1, before.Open, before.Close, -1, 0);
 if (match >= 0)
-transformer.MoveTo(new SnapshotPoint(snapshot, match), false, PositionAffinity.Successor);
+       transformer.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(snapshot, match)), false, PositionAffinity.Successor);
 return;
 }
 
@@ -133,7 +125,7 @@ char close = snapshot[pos.Position] == after.Open ? after.Close : after.Open;
 int dir = snapshot[pos.Position] == after.Open ? 1 : -1;
 int match = FindMatch(snapshot, pos.Position, open, close, dir, 0);
 if (match >= 0)
-transformer.MoveTo(new SnapshotPoint(snapshot, match), false, PositionAffinity.Successor);
+       transformer.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(snapshot, match)), false, PositionAffinity.Successor);
 }
 }
 
@@ -177,9 +169,9 @@ var snapshot = _view.TextBuffer.CurrentSnapshot;
 var newSelections = new List<Selection>();
 foreach (var sel in sels)
 {
-var start = new SnapshotPoint(snapshot, sel.Start.Position);
-var end = new SnapshotPoint(snapshot, sel.End.Position + 2);
-newSelections.Add(new Selection(new VirtualSnapshotSpan(start, end), sel.IsReversed));
+       var start = new VirtualSnapshotPoint(snapshot, sel.Start.Position);
+       var end = new VirtualSnapshotPoint(snapshot, sel.End.Position + 2);
+       newSelections.Add(new Selection(new VirtualSnapshotSpan(start, end), sel.IsReversed));
 }
 ApplySelections(newSelections);
 }
@@ -245,7 +237,7 @@ if (open >= 0 && close >= 0 && open < close)
 {
 int start = around ? open : open + 1;
 int end = around ? close + 1 : close;
-newSelections.Add(new Selection(new VirtualSnapshotSpan(new SnapshotPoint(snapshot, start), new SnapshotPoint(snapshot, end)), sel.IsReversed));
+       newSelections.Add(new Selection(new VirtualSnapshotSpan(new VirtualSnapshotPoint(snapshot, start), new VirtualSnapshotPoint(snapshot, end)), sel.IsReversed));
 }
 else
 {

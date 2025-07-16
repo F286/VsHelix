@@ -141,8 +141,8 @@ namespace VsHelix
 		private readonly ITextSearchService2 _searchService;
                private readonly SearchHighlightTagger _highlighter;
 
-               private delegate bool CommandHandler(TypeCharCommandArgs args);
-               private readonly Dictionary<char, CommandHandler> _commandMap;
+               private delegate bool CommandHandler(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
+               private readonly Keymap _keymap;
 
                public SearchMode(bool selectAll, ITextView view, IMultiSelectionBroker broker, List<SnapshotSpan> domain, ITextSearchService2 searchService)
                {
@@ -157,23 +157,27 @@ namespace VsHelix
                        // Get the highlighter tagger from view properties
                        _highlighter = _view.Properties.GetProperty<SearchHighlightTagger>("SearchHighlightTagger");
 
-                       _commandMap = new Dictionary<char, CommandHandler>
-                       {
-                               ['n'] = args => { CycleMatch(true); return true; },
-                               ['N'] = args => { CycleMatch(false); return true; }
-                       };
+                       _keymap = new Keymap();
+                       _keymap.Add("n", (c, v, b, o) => { CycleMatch(true); return true; });
+                       _keymap.Add("N", (c, v, b, o) => { CycleMatch(false); return true; });
+                       _keymap.Add("\b", (c, v, b, o) => { if (_query.Length > 0) { _query = _query.Substring(0, _query.Length - 1); UpdateMatches(); } return true; });
+                       _keymap.Add("\r", (c, v, b, o) => { if (SelectionManager.Instance.HasSavedSelections) SelectionManager.Instance.ClearSelections(); Finish(); return true; });
+                       _keymap.Add("\u001b", (c, v, b, o) => { if (SelectionManager.Instance.HasSavedSelections) SelectionManager.Instance.RestoreSelections(_broker); _highlighter.UpdateHighlights(System.Linq.Enumerable.Empty<SnapshotSpan>()); ModeManager.Instance.EnterNormal(_view, _broker); return true; });
 
                        UpdateStatus();
                }
 
 
 
-               public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+               public bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
                {
-                       if (_commandMap.TryGetValue(args.TypedChar, out var handler))
-                               return handler(args);
+                       if (_keymap.TryGetCommand(ch, out var handler))
+                       {
+                               if (handler != null)
+                                       return handler(ch, view, broker, operations);
+                               return true;
+                       }
 
-                       char ch = args.TypedChar;
                        if (!char.IsControl(ch))
                        {
                                _query += ch;

@@ -30,7 +30,7 @@ namespace VsHelix
                 private SearchMode? _searchMode;
                 public SearchMode? Search => _searchMode;
                 private MatchMode? _matchMode;
-                public MatchMode? Match => _matchMode;
+                internal MatchMode? Match => _matchMode;
 
 
 		private ITextSearchService2 GetSearchService()
