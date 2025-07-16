@@ -397,6 +397,48 @@ namespace VsHelix
 				return;
 			}
 
+			// Get original line text and compute expanded (tab-expanded) text length for alignment.
+			string originalLineText = startLine.GetText();
+			string expandedText = originalLineText.Replace("\t", new string(' ', view.Options.GetTabSize()));
+
+			// Calculate visual offsets of selection start and end within the line (accounting for tabs and virtual spaces).
+			int startOffset = CalculateExpandedOffset(originalLineText.Substring(0, startPoint.Position - startLine.Start), view.Options.GetTabSize());
+			int endOffset = CalculateExpandedOffset(originalLineText.Substring(0, endPoint.Position - startLine.Start), view.Options.GetTabSize());
+			// Include virtual space in the offset calculations.
+			startOffset += startPoint.VirtualSpaces;
+			endOffset += endPoint.VirtualSpaces;
+
+			// Find a line below that has enough length to accommodate the selection at these offsets.
+			int nextLineNumber = endLine.LineNumber + 1;
+			ITextSnapshotLine targetLine = null;
+			int requiredOffset = Math.Max(startOffset, endOffset);
+			while (nextLineNumber < snapshot.LineCount)
+			{
+				var candidateLine = snapshot.GetLineFromLineNumber(nextLineNumber);
+				int candidateLength = CalculateExpandedOffset(candidateLine.GetText(), view.Options.GetTabSize());
+				if (candidateLength >= requiredOffset)
+				{
+					targetLine = candidateLine;
+					break;
+				}
+				nextLineNumber++;
+			}
+			if (targetLine == null)
+			{
+				// No suitable line found below; cannot add a caret aligned to the selection.
+				return;
+			}
+
+			// Create points on the target line corresponding to the original selection's start/end visual offsets.
+			var newStartPoint = CreatePointAtVisualOffset(targetLine, startOffset, view.Options.GetTabSize());
+			var newEndPoint = CreatePointAtVisualOffset(targetLine, endOffset, view.Options.GetTabSize());
+
+			// Form a new selection on the target line with the same orientation (direction) as the original.
+			var newSelection = bottomSelection.IsReversed
+				? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)   // reversed selection
+				: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);  // forward selection
+
+			broker.AddSelection(newSelection);
 		}
 
 		private System.Collections.Generic.List<SnapshotSpan> GetSearchDomain(ITextView view, IMultiSelectionBroker broker)
