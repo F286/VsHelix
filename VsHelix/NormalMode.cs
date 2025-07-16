@@ -86,8 +86,49 @@ namespace VsHelix
 						}
 					}
 				},
-				['j'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToNextLine),             // Move down
-				['k'] = sel => sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine),         // Move up
+				['j'] = sel =>
+				{
+					if (sel.Selection.IsEmpty)
+					{
+						sel.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
+					}
+					else
+					{
+						if (sel.Selection.IsReversed)
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
+						}
+						else
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToNextLine);
+						}
+					}
+				},
+				['k'] = sel =>
+				{
+					if (sel.Selection.IsEmpty)
+					{
+						sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
+					}
+					else
+					{
+						if (sel.Selection.IsReversed)
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
+						}
+						else
+						{
+							sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+							sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousLine);
+						}
+					}
+				},
+
 
 				// Word-wise movements (clear selection then extend)
 				['w'] = sel =>
