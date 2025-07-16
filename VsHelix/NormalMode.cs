@@ -197,7 +197,12 @@ namespace VsHelix
 				ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			};
-			_commandMap['/'] = (args, view, broker, ops) =>
+                        _commandMap['m'] = (args, view, broker, ops) =>
+                        {
+                                ModeManager.Instance.EnterMatch(view, broker);
+                                return true;
+                        };
+                        _commandMap['/'] = (args, view, broker, ops) =>
 			{
 				SelectionManager.Instance.SaveSelections(broker);
 				var spans = GetSearchDomain(view, broker);
