@@ -236,13 +236,23 @@ namespace VsHelix
 			_commandMap['u'] = (args, view, broker, ops) =>
 			{
 				// Undo last edit.
-				//ops.Undo();
+				var undoManager = view.TextBuffer.Properties.GetProperty<ITextBufferUndoManager>(typeof(ITextBufferUndoManager));
+				var undoHistory = undoManager.TextBufferUndoHistory;
+				if (undoHistory.CanUndo)
+				{
+					undoHistory.Undo(1);
+				}
 				return true;
 			};
 			_commandMap['U'] = (args, view, broker, ops) =>
 			{
 				// Redo last undone edit.
-				//ops.Redo();
+				var undoManager = view.TextBuffer.Properties.GetProperty<ITextBufferUndoManager>(typeof(ITextBufferUndoManager));
+				var undoHistory = undoManager.TextBufferUndoHistory;
+				if (undoHistory.CanRedo)
+				{
+					undoHistory.Redo(1);
+				}
 				return true;
 			};
 			_commandMap['p'] = (args, view, broker, ops) =>
