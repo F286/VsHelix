@@ -32,8 +32,11 @@ namespace VsHelix
 		/// </summary>
 		private delegate bool CommandHandler(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
 
-		// Map from typed character to its command handler.
-		private readonly Dictionary<char, CommandHandler> _commandMap;
+                // Map from typed character to its command handler.
+                private readonly Dictionary<char, CommandHandler> _commandMap;
+
+                // Stores a pending numeric prefix when the user types digits.
+                private int _pendingCount = 0;
 
 		public NormalMode()
 		{
@@ -267,15 +270,36 @@ namespace VsHelix
 		/// </summary>
 		public bool Handle(TypeCharCommandArgs args, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
 		{
-			if (_commandMap.TryGetValue(args.TypedChar, out var handler))
+			char c = args.TypedChar;
+			
+			if (char.IsDigit(c))
 			{
-				// Found a command for this key – execute it.
-				return handler(args, view, broker, operations);
+				int digit = c - '0';
+				_pendingCount = (_pendingCount * 10) + digit;
+				return true;
 			}
-
-			// Unrecognized key in Normal mode: do nothing (but consume the input to prevent insertion).
-			return true;
-		}
+			
+			if (_commandMap.TryGetValue(c, out var handler))
+			{
+				int count = _pendingCount > 0 ? _pendingCount : 1;
+				_pendingCount = 0;
+			
+				bool result = true;
+				for (int i = 0; i < count; i++)
+				{
+					if (ModeManager.Instance.Current != ModeManager.EditorMode.Normal)
+					break;
+			
+					result &= handler(args, view, broker, operations);
+				}
+			
+				return result;
+			}
+			
+				_pendingCount = 0;
+				// Unrecognized key in Normal mode: do nothing (but consume the input to prevent insertion).
+				return true;
+			}
 
 		/// <summary>
 		/// Executes a delete/change command: yanks selections (unless Alt is pressed), deletes them, and optionally enters Insert mode.
