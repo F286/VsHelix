@@ -294,16 +294,19 @@ namespace VsHelix
 				int count = _pendingCount > 0 ? _pendingCount : 1;
 				_pendingCount = 0;
 			
-				bool result = true;
-				for (int i = 0; i < count; i++)
-				{
-					if (ModeManager.Instance.Current != ModeManager.EditorMode.Normal)
-					break;
-			
-					result &= handler(args, view, broker, operations);
-				}
-			
-				return result;
+                                bool result = true;
+                                for (int i = 0; i < count; i++)
+                                {
+                                        if (ModeManager.Instance.Current != ModeManager.EditorMode.Normal)
+                                                break;
+
+                                        result &= handler(args, view, broker, operations);
+                                }
+
+                                // Ensure the primary caret is visible after executing the command.
+                                view.Caret.EnsureVisible();
+
+                                return result;
 			}
 			
 				_pendingCount = 0;
