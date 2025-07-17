@@ -24,8 +24,9 @@ namespace VsHelix
 		private const string ModeKey = nameof(TypeCharFilter) + "_mode";
 
 		private readonly IEditorOperationsFactoryService _editorOperationsFactory;
-		private readonly IInputMode _insertMode = new InsertMode();
-		private readonly IInputMode _normalMode = new NormalMode();
+                private readonly IInputMode _insertMode = new InsertMode();
+                private readonly IInputMode _normalMode = new NormalMode();
+                private readonly IInputMode _visualMode = new VisualMode();
 
 		[ImportingConstructor]
 		internal TypeCharFilter(IEditorOperationsFactoryService editorOperationsFactory)
@@ -51,6 +52,10 @@ namespace VsHelix
                         else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
                         {
                                 return _insertMode.HandleChar(args.TypedChar, view, broker, ops);
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Visual)
+                        {
+                                return _visualMode.HandleChar(args.TypedChar, view, broker, ops);
                         }
                         else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
                         {

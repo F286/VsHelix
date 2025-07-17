@@ -11,9 +11,10 @@ namespace VsHelix
 			var status = ServiceProvider.GlobalProvider.GetService(typeof(SVsStatusbar)) as IVsStatusbar;
 			var text = mode switch
 			{
-				ModeManager.EditorMode.Normal => "NOR",
-				ModeManager.EditorMode.Insert => "INS",
-                                ModeManager.EditorMode.Search => "SCH",
+                               ModeManager.EditorMode.Normal => "NOR",
+                               ModeManager.EditorMode.Insert => "INS",
+                               ModeManager.EditorMode.Visual => "VIS",
+                               ModeManager.EditorMode.Search => "SCH",
                                 _ => mode.ToString().ToUpperInvariant(),
 			};
 			if (!string.IsNullOrEmpty(extra))

@@ -65,3 +65,5 @@ Press `m` followed by another key to manipulate matching pairs:
 `mm` jumps to the matching bracket, `ms<char>` surrounds the selection,
 `mr<from><to>` replaces the surrounding characters, `md<char>` removes the
 surrounding pair, and `ma`/`mi <char>` select around or inside a pair.
+Press `v` toggles Visual mode where movements extend the current selections.
+While in Visual mode, `y`, `d`, and `c` operate on the selection and return to Normal mode.
