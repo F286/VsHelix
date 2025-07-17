@@ -26,15 +26,15 @@ namespace VsHelix
 	/// </summary>
 	internal sealed class NormalMode : IInputMode
 	{
-               // Map from typed character to its command handler.
-                private readonly Keymap _keymap;
+		// Map from typed character to its command handler.
+		private readonly Keymap _keymap;
 
-                // Stores a pending numeric prefix when the user types digits.
-                private int _pendingCount = 0;
+		// Stores a pending numeric prefix when the user types digits.
+		private int _pendingCount = 0;
 
 		public NormalMode()
 		{
-                        _keymap = new Keymap();
+			_keymap = new Keymap();
 
 			// ** Movement commands keymap (single-key movements) **
 			var movementCommands = new Dictionary<char, Action<ISelectionTransformer>>
@@ -151,166 +151,166 @@ namespace VsHelix
 			};
 
 			// Register all movement commands to the command map.
-                        foreach (var kvp in movementCommands)
-                        {
-                                _keymap.Add(kvp.Key.ToString(), (c, view, broker, ops) =>
-                                {
-                                        broker.PerformActionOnAllSelections(kvp.Value);
-                                        return true;
-                                });
-                        }
+			foreach (var kvp in movementCommands)
+			{
+				_keymap.Add(kvp.Key.ToString(), (c, view, broker, ops) =>
+				{
+					broker.PerformActionOnAllSelections(kvp.Value);
+					return true;
+				});
+			}
 
 			// ** Other normal-mode commands **
-                        _keymap.Add("i", (c, view, broker, ops) =>
-                        {
-                                // Enter Insert mode at the start of each selection.
-                                SelectionManager.Instance.SaveSelections(broker);
-                                broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionStart(sel));
-                                ModeManager.Instance.EnterInsert(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("a", (c, view, broker, ops) =>
-                        {
-                                // Enter Insert mode at the end of each selection (append).
-                                SelectionManager.Instance.SaveSelections(broker);
-                                broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionEnd(sel));
-                                ModeManager.Instance.EnterInsert(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("o", (c, view, broker, ops) =>
-                        {
-                                // Open a new line *below* each selection and enter Insert mode.
-                                AddLine(view, broker, ops, above: false);
-                                ModeManager.Instance.EnterInsert(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("O", (c, view, broker, ops) =>
-                        {
-                                // Open a new line *above* each selection and enter Insert mode.
-                                AddLine(view, broker, ops, above: true);
-                                ModeManager.Instance.EnterInsert(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("m", (c, view, broker, ops) =>
-                        {
-                                ModeManager.Instance.EnterMatch(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("/", (c, view, broker, ops) =>
-                        {
-                                SelectionManager.Instance.SaveSelections(broker);
-                                var spans = GetSearchDomain(view, broker);
-                                ModeManager.Instance.EnterSearch(view, broker, false, spans);
-                                return true;
-                        });
-                        _keymap.Add("s", (c, view, broker, ops) =>
-                        {
-                                SelectionManager.Instance.SaveSelections(broker);
-                                var spans = GetSearchDomain(view, broker);
-                                ModeManager.Instance.EnterSearch(view, broker, true, spans);
-                                return true;
-                        });
-                        _keymap.Add("x", (c, view, broker, ops) =>
-                        {
-                                // Extend selection to full lines, or extend linewise selection to the next line.
-                                broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
-                                return true;
-                        });
-                        _keymap.Add("y", (c, view, broker, ops) =>
-                        {
-                                // Yank (copy) current selections.
-                                YankSelections(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("d", (c, view, broker, ops) =>
-                        {
-                                // Delete selection (and yank unless Alt is held).
-                                return ExecuteDeleteCommand(view, broker, switchToInsert: false);
-                        });
-                        _keymap.Add("c", (c, view, broker, ops) =>
-                        {
-                                // Change (delete then enter Insert mode, and yank unless Alt is held).
-                                return ExecuteDeleteCommand(view, broker, switchToInsert: true);
-                        });
-                        _keymap.Add("u", (c, view, broker, ops) =>
-                        {
-                                // Undo last edit.
-                                var undoManager = view.TextBuffer.Properties.GetProperty<ITextBufferUndoManager>(typeof(ITextBufferUndoManager));
-                                var undoHistory = undoManager.TextBufferUndoHistory;
-                                if (undoHistory.CanUndo)
-                                {
-                                        undoHistory.Undo(1);
-                                }
-                                return true;
-                        });
-                        _keymap.Add("U", (c, view, broker, ops) =>
-                        {
-                                // Redo last undone edit.
-                                var undoManager = view.TextBuffer.Properties.GetProperty<ITextBufferUndoManager>(typeof(ITextBufferUndoManager));
-                                var undoHistory = undoManager.TextBufferUndoHistory;
-                                if (undoHistory.CanRedo)
-                                {
-                                        undoHistory.Redo(1);
-                                }
-                                return true;
-                        });
-                        _keymap.Add("p", (c, view, broker, ops) =>
-                        {
-                                // Paste from yank register/clipboard.
-                                Paste(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("C", (c, view, broker, ops) =>
-                        {
-                                // Add a new caret below the last selection (multi-cursor).
-                                AddCaretBelowLastSelection(view, broker);
-                                return true;
-                        });
-                        _keymap.Add(",", (c, view, broker, ops) =>
-                        {
-                                // Clear all secondary selections, keeping only the primary.
-                                broker.ClearSecondarySelections();
-                                return true;
-                        });
+			_keymap.Add("i", (c, view, broker, ops) =>
+			{
+				// Enter Insert mode at the start of each selection.
+				SelectionManager.Instance.SaveSelections(broker);
+				broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionStart(sel));
+				ModeManager.Instance.EnterInsert(view, broker);
+				return true;
+			});
+			_keymap.Add("a", (c, view, broker, ops) =>
+			{
+				// Enter Insert mode at the end of each selection (append).
+				SelectionManager.Instance.SaveSelections(broker);
+				broker.PerformActionOnAllSelections(sel => MoveCaretToSelectionEnd(sel));
+				ModeManager.Instance.EnterInsert(view, broker);
+				return true;
+			});
+			_keymap.Add("o", (c, view, broker, ops) =>
+			{
+				// Open a new line *below* each selection and enter Insert mode.
+				AddLine(view, broker, ops, above: false);
+				ModeManager.Instance.EnterInsert(view, broker);
+				return true;
+			});
+			_keymap.Add("O", (c, view, broker, ops) =>
+			{
+				// Open a new line *above* each selection and enter Insert mode.
+				AddLine(view, broker, ops, above: true);
+				ModeManager.Instance.EnterInsert(view, broker);
+				return true;
+			});
+			_keymap.Add("m", (c, view, broker, ops) =>
+			{
+				ModeManager.Instance.EnterMatch(view, broker);
+				return true;
+			});
+			_keymap.Add("/", (c, view, broker, ops) =>
+			{
+				SelectionManager.Instance.SaveSelections(broker);
+				var spans = GetSearchDomain(view, broker);
+				ModeManager.Instance.EnterSearch(view, broker, false, spans);
+				return true;
+			});
+			_keymap.Add("s", (c, view, broker, ops) =>
+			{
+				SelectionManager.Instance.SaveSelections(broker);
+				var spans = GetSearchDomain(view, broker);
+				ModeManager.Instance.EnterSearch(view, broker, true, spans);
+				return true;
+			});
+			_keymap.Add("x", (c, view, broker, ops) =>
+			{
+				// Extend selection to full lines, or extend linewise selection to the next line.
+				broker.PerformActionOnAllSelections(sel => ExtendSelectionLinewise(sel, view));
+				return true;
+			});
+			_keymap.Add("y", (c, view, broker, ops) =>
+			{
+				// Yank (copy) current selections.
+				YankSelections(view, broker);
+				return true;
+			});
+			_keymap.Add("d", (c, view, broker, ops) =>
+			{
+				// Delete selection (and yank unless Alt is held).
+				return ExecuteDeleteCommand(view, broker, switchToInsert: false);
+			});
+			_keymap.Add("c", (c, view, broker, ops) =>
+			{
+				// Change (delete then enter Insert mode, and yank unless Alt is held).
+				return ExecuteDeleteCommand(view, broker, switchToInsert: true);
+			});
+			_keymap.Add("u", (c, view, broker, ops) =>
+			{
+				// Undo last edit.
+				var undoManager = view.TextBuffer.Properties.GetProperty<ITextBufferUndoManager>(typeof(ITextBufferUndoManager));
+				var undoHistory = undoManager.TextBufferUndoHistory;
+				if (undoHistory.CanUndo)
+				{
+					undoHistory.Undo(1);
+				}
+				return true;
+			});
+			_keymap.Add("U", (c, view, broker, ops) =>
+			{
+				// Redo last undone edit.
+				var undoManager = view.TextBuffer.Properties.GetProperty<ITextBufferUndoManager>(typeof(ITextBufferUndoManager));
+				var undoHistory = undoManager.TextBufferUndoHistory;
+				if (undoHistory.CanRedo)
+				{
+					undoHistory.Redo(1);
+				}
+				return true;
+			});
+			_keymap.Add("p", (c, view, broker, ops) =>
+			{
+				// Paste from yank register/clipboard.
+				Paste(view, broker);
+				return true;
+			});
+			_keymap.Add("C", (c, view, broker, ops) =>
+			{
+				// Add a new caret below the last selection (multi-cursor).
+				AddCaretBelowLastSelection(view, broker);
+				return true;
+			});
+			_keymap.Add(",", (c, view, broker, ops) =>
+			{
+				// Clear all secondary selections, keeping only the primary.
+				broker.ClearSecondarySelections();
+				return true;
+			});
 		}
 
 		/// <summary>
 		/// Handles a typed character command in Normal mode by dispatching to the appropriate action.
 		/// </summary>
-               public bool HandleChar(char c, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-               {
-                       if (char.IsDigit(c) && !_keymap.HasPending)
-                        {
-                                int digit = c - '0';
-                                _pendingCount = (_pendingCount * 10) + digit;
-                                return true;
-                        }
+		public bool HandleChar(char c, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+		{
+			if (char.IsDigit(c) && !_keymap.HasPending)
+			{
+				int digit = c - '0';
+				_pendingCount = (_pendingCount * 10) + digit;
+				return true;
+			}
 
-                        if (_keymap.TryGetCommand(c, out var handler))
-                        {
-                                if (handler != null)
-                                {
-                                        int count = _pendingCount > 0 ? _pendingCount : 1;
-                                        _pendingCount = 0;
+			if (_keymap.TryGetCommand(c, out var handler))
+			{
+				if (handler != null)
+				{
+					int count = _pendingCount > 0 ? _pendingCount : 1;
+					_pendingCount = 0;
 
-                                        bool result = true;
-                                        for (int i = 0; i < count; i++)
-                                        {
-                                                if (ModeManager.Instance.Current != ModeManager.EditorMode.Normal)
-                                                        break;
+					bool result = true;
+					for (int i = 0; i < count; i++)
+					{
+						if (ModeManager.Instance.Current != ModeManager.EditorMode.Normal)
+							break;
 
-                                       result &= handler(c, view, broker, operations);
-                                        }
-                                        return result;
-                                }
-                                return true; // awaiting more keys
-                        }
+						result &= handler(c, view, broker, operations);
+					}
+					return result;
+				}
+				return true; // awaiting more keys
+			}
 
-                        _pendingCount = 0;
-                        _keymap.Reset();
-                        // Unrecognized key in Normal mode: consume without inserting.
-                        return true;
-                }
+			_pendingCount = 0;
+			_keymap.Reset();
+			// Unrecognized key in Normal mode: consume without inserting.
+			return true;
+		}
 
 		/// <summary>
 		/// Executes a delete/change command: yanks selections (unless Alt is pressed), deletes them, and optionally enters Insert mode.
