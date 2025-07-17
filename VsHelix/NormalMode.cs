@@ -24,17 +24,52 @@ namespace VsHelix
 	/// Handles key input when in Normal mode. 
 	/// Refactored to use a key-to-command map (Helix-style) for maintainability.
 	/// </summary>
-	internal sealed class NormalMode : IInputMode
-	{
-		// Map from typed character to its command handler.
-		private readonly Keymap _keymap;
+	   internal sealed class NormalMode : IInputMode
+	   {
+			   internal static NormalMode? Instance { get; private set; }
 
-		// Stores a pending numeric prefix when the user types digits.
-		private int _pendingCount = 0;
+			   // Map from typed character to its command handler.
+			   private readonly Keymap _keymap;
 
-		public NormalMode()
-		{
-			_keymap = new Keymap();
+			   // Stores a pending numeric prefix when the user types digits.
+			   private int _pendingCount = 0;
+
+			   private bool _pendingSurround;
+			   private bool _pendingDeletePair;
+
+			   private enum ReplaceState { None, FirstChar, SecondChar }
+			   private ReplaceState _pendingReplace = ReplaceState.None;
+			   private char _replaceFromChar;
+
+			   private enum ObjectSelectType { Around, Inside }
+			   private ObjectSelectType? _pendingObjectSelect;
+
+			   private readonly struct BracketPair
+			   {
+					   public readonly char Open;
+					   public readonly char Close;
+					   public BracketPair(char open, char close)
+					   {
+							   Open = open;
+							   Close = close;
+					   }
+			   }
+
+			   private static readonly IReadOnlyDictionary<char, BracketPair> _pairs = new Dictionary<char, BracketPair>
+			   {
+					   ['('] = new BracketPair('(', ')'),
+					   ['['] = new BracketPair('[', ']'),
+					   ['{'] = new BracketPair('{', '}'),
+					   ['<'] = new BracketPair('<', '>'),
+					   ['"'] = new BracketPair('"', '"'),
+					   ['\''] = new BracketPair('\'', '\''),
+					   ['`'] = new BracketPair('`', '`')
+			   };
+
+			   public NormalMode()
+			   {
+					   Instance = this;
+					   _keymap = new Keymap();
 
 			// ** Movement commands keymap (single-key movements) **
 			var movementCommands = new Dictionary<char, Action<ISelectionTransformer>>
@@ -191,11 +226,42 @@ namespace VsHelix
 				ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			});
-			_keymap.Add("m", (c, view, broker, ops) =>
-			{
-				ModeManager.Instance.EnterMatch(view, broker);
-				return true;
-			});
+_keymap.Add("m", null); // prefix for match commands
+_keymap.Add("mm", (c, view, broker, ops) =>
+{
+broker.PerformActionOnAllSelections(sel => GoToMatchingBracket(sel));
+return true;
+});
+_keymap.Add("ms", (c, view, broker, ops) =>
+{
+_pendingSurround = true;
+StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal, "surround with char");
+return true;
+});
+_keymap.Add("mr", (c, view, broker, ops) =>
+{
+_pendingReplace = ReplaceState.FirstChar;
+StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal, "replace pair from");
+return true;
+});
+_keymap.Add("md", (c, view, broker, ops) =>
+{
+_pendingDeletePair = true;
+StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal, "delete pair");
+return true;
+});
+_keymap.Add("ma", (c, view, broker, ops) =>
+{
+_pendingObjectSelect = ObjectSelectType.Around;
+StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal, "select around");
+return true;
+});
+_keymap.Add("mi", (c, view, broker, ops) =>
+{
+_pendingObjectSelect = ObjectSelectType.Inside;
+StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal, "select inside");
+return true;
+});
 			_keymap.Add("/", (c, view, broker, ops) =>
 			{
 				SelectionManager.Instance.SaveSelections(broker);
@@ -277,13 +343,53 @@ namespace VsHelix
 		/// <summary>
 		/// Handles a typed character command in Normal mode by dispatching to the appropriate action.
 		/// </summary>
-		public bool HandleChar(char c, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-		{
-			if (char.IsDigit(c) && !_keymap.HasPending)
-			{
-				int digit = c - '0';
-				_pendingCount = (_pendingCount * 10) + digit;
-				return true;
+			   public bool HandleChar(char c, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+			   {
+					   if (_pendingSurround)
+					   {
+							   _pendingSurround = false;
+							   StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal);
+							   SurroundSelections(c, view, broker);
+							   return true;
+					   }
+					   if (_pendingDeletePair)
+					   {
+							   _pendingDeletePair = false;
+							   StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal);
+							   DeleteSurround(c, view, broker);
+							   return true;
+					   }
+					   if (_pendingReplace != ReplaceState.None)
+					   {
+							   if (_pendingReplace == ReplaceState.FirstChar)
+							   {
+									   _replaceFromChar = c;
+									   _pendingReplace = ReplaceState.SecondChar;
+									   StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal, "replace pair to");
+									   return true;
+							   }
+							   else
+							   {
+									   _pendingReplace = ReplaceState.None;
+									   StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal);
+									   ReplaceSurround(_replaceFromChar, c, view, broker);
+									   return true;
+							   }
+					   }
+					   if (_pendingObjectSelect.HasValue)
+					   {
+							   var around = _pendingObjectSelect == ObjectSelectType.Around;
+							   _pendingObjectSelect = null;
+							   StatusBarHelper.ShowMode(ModeManager.EditorMode.Normal);
+							   SelectTextObject(c, around, view, broker);
+							   return true;
+					   }
+
+					   if (char.IsDigit(c) && !_keymap.HasPending)
+					   {
+							   int digit = c - '0';
+							   _pendingCount = (_pendingCount * 10) + digit;
+							   return true;
 			}
 
 			if (_keymap.TryGetCommand(c, out var handler))
@@ -638,16 +744,258 @@ namespace VsHelix
 		/// <summary>
 		/// Checks if a selection spans whole lines (from the start of a line to the end of that line’s content).
 		/// </summary>
-		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
-		{
-			if (sel.IsEmpty || sel.Start.IsInVirtualSpace || sel.End.IsInVirtualSpace)
-				return false;
+			   private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
+			   {
+					   if (sel.IsEmpty || sel.Start.IsInVirtualSpace || sel.End.IsInVirtualSpace)
+							   return false;
 
 			var startLine = sel.Start.Position.GetContainingLine();
 			var endLine = sel.End.Position.GetContainingLine();
 			// True if the selection starts at line beginning and ends exactly at line content end.
-			return sel.Start.Position == startLine.Start && sel.End.Position == endLine.End;
-		}
+					   return sel.Start.Position == startLine.Start && sel.End.Position == endLine.End;
+			   }
+
+			   private static bool TryGetBracket(char ch, out char open, out char close)
+			   {
+					   open = default;
+					   close = default;
+					   if (_pairs.TryGetValue(ch, out var pair))
+					   {
+							   open = ch;
+							   close = pair.Close;
+							   return true;
+					   }
+					   foreach (var kv in _pairs)
+					   {
+							   if (kv.Value.Close == ch)
+							   {
+									   open = kv.Value.Open;
+									   close = ch;
+									   return true;
+							   }
+					   }
+					   return false;
+			   }
+
+			   private void GoToMatchingBracket(ISelectionTransformer transformer)
+			   {
+					   var pos = transformer.Selection.ActivePoint.Position;
+					   var snapshot = pos.Snapshot;
+
+					   if (pos.Position > 0 && TryGetBracket(snapshot[pos.Position - 1], out var openBefore, out var closeBefore))
+					   {
+							   var isOpen = snapshot[pos.Position - 1] == openBefore;
+							   var dir = isOpen ? 1 : -1;
+							   if (!isOpen)
+							   {
+									   var temp = openBefore;
+									   openBefore = closeBefore;
+									   closeBefore = temp;
+							   }
+							   int match = FindMatch(snapshot, pos.Position - 1, openBefore, closeBefore, dir, 0);
+							   if (match >= 0)
+									   transformer.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(snapshot, match)), false, PositionAffinity.Successor);
+							   return;
+					   }
+
+					   if (pos.Position < snapshot.Length && TryGetBracket(snapshot[pos.Position], out var openAfter, out var closeAfter))
+					   {
+							   var isOpen = snapshot[pos.Position] == openAfter;
+							   var dir = isOpen ? 1 : -1;
+							   if (!isOpen)
+							   {
+									   var temp = openAfter;
+									   openAfter = closeAfter;
+									   closeAfter = temp;
+							   }
+							   int match = FindMatch(snapshot, pos.Position, openAfter, closeAfter, dir, 0);
+							   if (match >= 0)
+									   transformer.MoveTo(new VirtualSnapshotPoint(new SnapshotPoint(snapshot, match)), false, PositionAffinity.Successor);
+					   }
+			   }
+
+			   private static int FindMatch(ITextSnapshot snapshot, int start, char open, char close, int dir, int depth)
+			   {
+					   if (open == close)
+					   {
+							   int i = start + dir;
+							   while (i >= 0 && i < snapshot.Length)
+							   {
+									   if (snapshot[i] == close)
+											   return i;
+									   i += dir;
+							   }
+							   return -1;
+					   }
+					   else
+					   {
+							   int i = start;
+							   while (true)
+							   {
+									   i += dir;
+									   if (i < 0 || i >= snapshot.Length)
+											   return -1;
+									   char c = snapshot[i];
+									   if (c == open)
+											   depth++;
+									   else if (c == close)
+									   {
+											   if (depth == 0)
+													   return i;
+											   depth--;
+									   }
+							   }
+					   }
+			   }
+
+			   private void SurroundSelections(char ch, ITextView view, IMultiSelectionBroker broker)
+			   {
+					   if (!TryGetBracket(ch, out var open, out var close))
+							   return;
+
+					   var sels = broker.AllSelections.OrderByDescending(s => s.Start.Position).ToList();
+					   using (var edit = view.TextBuffer.CreateEdit())
+					   {
+							   foreach (var sel in sels)
+							   {
+									   edit.Insert(sel.End.Position, close.ToString());
+									   edit.Insert(sel.Start.Position, open.ToString());
+							   }
+							   edit.Apply();
+					   }
+
+					   var snapshot = view.TextBuffer.CurrentSnapshot;
+					   var newSelections = new List<Selection>();
+					   foreach (var sel in sels)
+					   {
+							   var start = new VirtualSnapshotPoint(snapshot, sel.Start.Position + 1);
+							   var end = new VirtualSnapshotPoint(snapshot, sel.End.Position + 1);
+							   newSelections.Add(new Selection(new VirtualSnapshotSpan(start, end), sel.IsReversed));
+					   }
+					   ApplySelections(newSelections, view, broker);
+			   }
+
+			   private void ReplaceSurround(char fromCh, char toCh, ITextView view, IMultiSelectionBroker broker)
+			   {
+					   if (!TryGetBracket(fromCh, out var fromOpen, out var fromClose) || !TryGetBracket(toCh, out var toOpen, out var toClose))
+							   return;
+
+					   var snapshot = view.TextBuffer.CurrentSnapshot;
+					   var toReplace = new Dictionary<int, string>();
+					   foreach (var sel in broker.AllSelections)
+					   {
+							   for (int p = sel.Start.Position - 1; p >= 0; p--)
+							   {
+									   if (snapshot[p] == fromOpen)
+									   {
+											   int match = FindMatch(snapshot, p, fromOpen, fromClose, 1, 0);
+											   if (match >= 0 && match >= sel.End.Position)
+											   {
+													   toReplace[p] = toOpen.ToString();
+													   toReplace[match] = toClose.ToString();
+													   break;
+											   }
+									   }
+							   }
+					   }
+
+					   if (toReplace.Count == 0)
+							   return;
+
+					   var ordered = toReplace.OrderByDescending(kv => kv.Key).ToList();
+					   using (var edit = view.TextBuffer.CreateEdit())
+					   {
+							   foreach (var kv in ordered)
+							   {
+									   edit.Replace(kv.Key, 1, kv.Value);
+							   }
+							   edit.Apply();
+					   }
+			   }
+
+			   private void DeleteSurround(char ch, ITextView view, IMultiSelectionBroker broker)
+			   {
+					   if (!TryGetBracket(ch, out var open, out var close))
+							   return;
+
+					   var snapshot = view.TextBuffer.CurrentSnapshot;
+					   var toDelete = new List<int>();
+					   foreach (var sel in broker.AllSelections)
+					   {
+							   for (int p = sel.Start.Position - 1; p >= 0; p--)
+							   {
+									   if (snapshot[p] == open)
+									   {
+											   int match = FindMatch(snapshot, p, open, close, 1, 0);
+											   if (match >= 0 && match >= sel.End.Position)
+											   {
+													   toDelete.Add(match);
+													   toDelete.Add(p);
+													   break;
+											   }
+									   }
+							   }
+					   }
+
+					   if (toDelete.Count == 0)
+							   return;
+
+					   toDelete = toDelete.Distinct().OrderByDescending(x => x).ToList();
+					   using (var edit = view.TextBuffer.CreateEdit())
+					   {
+							   foreach (int pos in toDelete)
+							   {
+									   edit.Delete(pos, 1);
+							   }
+							   edit.Apply();
+					   }
+			   }
+
+			   private void SelectTextObject(char ch, bool around, ITextView view, IMultiSelectionBroker broker)
+			   {
+					   if (!TryGetBracket(ch, out var open, out var close))
+							   return;
+
+					   var snapshot = view.TextBuffer.CurrentSnapshot;
+					   var newSelections = new List<Selection>();
+					   foreach (var sel in broker.AllSelections)
+					   {
+							   bool found = false;
+							   for (int p = sel.Start.Position - 1; p >= 0; p--)
+							   {
+									   if (snapshot[p] == open)
+									   {
+											   int match = FindMatch(snapshot, p, open, close, 1, 0);
+											   if (match >= 0 && match >= sel.End.Position)
+											   {
+													   int startPos = around ? p : p + 1;
+													   int endPos = around ? match + 1 : match;
+													   var start = new VirtualSnapshotPoint(snapshot, startPos);
+													   var end = new VirtualSnapshotPoint(snapshot, endPos);
+													   newSelections.Add(new Selection(new VirtualSnapshotSpan(start, end), sel.IsReversed));
+													   found = true;
+													   break;
+											   }
+									   }
+							   }
+							   if (!found)
+							   {
+									   newSelections.Add(sel);
+							   }
+					   }
+					   ApplySelections(newSelections, view, broker);
+			   }
+
+			   private void ApplySelections(IReadOnlyList<Selection> selections, ITextView view, IMultiSelectionBroker broker)
+			   {
+					   if (selections.Count == 0)
+							   return;
+
+					   broker.ClearSecondarySelections();
+					   view.Selection.Select(new SnapshotSpan(selections[0].Start.Position, selections[0].End.Position), selections[0].IsReversed);
+					   foreach (var sel in selections.Skip(1))
+							   broker.AddSelection(sel);
+			   }
 
 		/// <summary>
 		/// Yanks (copies) the current selections to both an internal register and the system clipboard.
@@ -706,11 +1054,11 @@ namespace VsHelix
 		/// <summary>
 		/// Pastes text from the internal yank register if available; otherwise falls back to system clipboard text.
 		/// </summary>
-		private void Paste(ITextView view, IMultiSelectionBroker broker)
-		{
-			var currentSelections = broker.AllSelections.ToList();
-			if (currentSelections.Count == 0)
-				return;
+				private void Paste(ITextView view, IMultiSelectionBroker broker)
+				{
+						var currentSelections = broker.AllSelections.ToList();
+						if (currentSelections.Count == 0)
+								return;
 
 			List<YankItem> pasteItems = null;
 
@@ -762,7 +1110,17 @@ namespace VsHelix
 				edit.Apply();
 			}
 
-			// (Optional enhancement: move each caret to the end of its pasted text, if desired.)
-		}
-	}
+						// (Optional enhancement: move each caret to the end of its pasted text, if desired.)
+			   }
+
+			   internal void Reset()
+			   {
+					   _keymap.Reset();
+					   _pendingCount = 0;
+					   _pendingSurround = false;
+					   _pendingDeletePair = false;
+					   _pendingReplace = ReplaceState.None;
+					   _pendingObjectSelect = null;
+			   }
+	   }
 }

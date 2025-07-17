@@ -56,10 +56,6 @@ namespace VsHelix
                         {
                                 return ModeManager.Instance.Search.HandleChar(args.TypedChar, view, broker, ops);
                         }
-                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Match && ModeManager.Instance.Match != null)
-                        {
-                                return ModeManager.Instance.Match.HandleChar(args.TypedChar, view, broker, ops);
-                        }
 
 			return false;
 		}
