@@ -192,6 +192,11 @@ namespace VsHelix
 			}
 
 			// ** Other normal-mode commands **
+			_keymap.Add("v", (c, view, broker, ops) =>
+			{
+				ModeManager.Instance.EnterVisual(view, broker);
+				return true;
+			});
 			_keymap.Add("i", (c, view, broker, ops) =>
 			{
 				// Enter Insert mode at the start of each selection.

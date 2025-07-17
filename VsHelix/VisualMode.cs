@@ -48,13 +48,13 @@ var snapshot = view.TextSnapshot;
 if (line.LineNumber + 1 < snapshot.LineCount)
 {
 var nextLine = snapshot.GetLineFromLineNumber(line.LineNumber + 1);
-int tabSize = view.Options.GetTabSize();
+int tabSize = (int)view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
 int posInLine = active.Position - line.Start.Position;
 string textToPos = line.GetText().Substring(0, posInLine);
 int expanded = SelectionUtils.CalculateExpandedOffset(textToPos, tabSize);
 expanded += active.VirtualSpaces;
 var target = SelectionUtils.CreatePointAtVisualOffset(nextLine, expanded, tabSize);
-sel.MoveTo(target, true);
+sel.MoveTo(target, true, PositionAffinity.Successor);
 }
 },
 ['k'] = (view, sel) =>
@@ -65,13 +65,13 @@ var snapshot = view.TextSnapshot;
 if (line.LineNumber > 0)
 {
 var prevLine = snapshot.GetLineFromLineNumber(line.LineNumber - 1);
-int tabSize = view.Options.GetTabSize();
+int tabSize = (int)view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
 int posInLine = active.Position - line.Start.Position;
 string textToPos = line.GetText().Substring(0, posInLine);
 int expanded = SelectionUtils.CalculateExpandedOffset(textToPos, tabSize);
 expanded += active.VirtualSpaces;
 var target = SelectionUtils.CreatePointAtVisualOffset(prevLine, expanded, tabSize);
-sel.MoveTo(target, true);
+sel.MoveTo(target, true, PositionAffinity.Successor);
 }
 },
 ['w'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord),
