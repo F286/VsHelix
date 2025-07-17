@@ -61,7 +61,7 @@ Pressing <kbd>Esc</kbd> now closes any active IntelliSense sessions before
 returning to normal mode.
 Pressing <kbd>,</kbd> clears all secondary selections, leaving a single cursor.
 Use `s` to select all matches of a regex typed inline. `/` performs an incremental search that highlights matches as you type. While searching, `n` and `N` jump to the next or previous match. Press **Enter** to accept the search or **Esc** to cancel. Enter and Backspace are now dispatched through the same keymap as other characters.
-Press `m` to manipulate matching pairs. After entering match mode:
-`m` jumps to the matching bracket, `s <char>` surrounds the selection,
-`r <from><to>` replaces the surrounding characters, `d <char>` removes the
-surrounding pair, and `a`/`i <char>` select around or inside a pair.
+Press `m` followed by another key to manipulate matching pairs:
+`mm` jumps to the matching bracket, `ms<char>` surrounds the selection,
+`mr<from><to>` replaces the surrounding characters, `md<char>` removes the
+surrounding pair, and `ma`/`mi <char>` select around or inside a pair.

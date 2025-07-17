@@ -36,8 +36,6 @@ namespace VsHelix
 
                         if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
                                 return ModeManager.Instance.Search.HandleChar('\b', view, broker, ops);
-                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Match && ModeManager.Instance.Match != null)
-                                return ModeManager.Instance.Match.HandleChar('\b', view, broker, ops);
                         if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
                                 return true; // swallow
 

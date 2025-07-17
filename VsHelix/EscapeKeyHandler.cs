@@ -60,17 +60,12 @@ namespace VsHelix
                                 ModeManager.Instance.EnterNormal(view, broker);
                                 return true;
                         }
-                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Match)
-                        {
-                                var view = args.TextView;
-                                var broker = view.GetMultiSelectionBroker();
-                                ModeManager.Instance.EnterNormal(view, broker);
-                                return true;
-                        }
 
-			// In normal mode, also cancel 'esc' keys as that would clear multiple selections.
-			// This prevents Visual Studio's default behavior of collapsing all carets to one.
-			return true;
+
+// In normal mode, also cancel 'esc' keys as that would clear multiple selections.
+// This prevents Visual Studio's default behavior of collapsing all carets to one.
+NormalMode.Instance?.Reset();
+return true;
 		}
 	}
 }

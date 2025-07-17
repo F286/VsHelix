@@ -24,13 +24,11 @@ namespace VsHelix
 		public static ModeManager Instance => lazyInstance.Value;
 
 		// --- Your existing class members ---
-                public enum EditorMode { Normal, Insert, Search, Match }
+               public enum EditorMode { Normal, Insert, Search }
 		public EditorMode Current { get; private set; } = EditorMode.Normal;
 
                 private SearchMode? _searchMode;
                 public SearchMode? Search => _searchMode;
-                private MatchMode? _matchMode;
-                internal MatchMode? Match => _matchMode;
 
 
 		private ITextSearchService2 GetSearchService()
@@ -55,22 +53,13 @@ namespace VsHelix
                         view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
                 }
 
-                public void EnterMatch(ITextView view, IMultiSelectionBroker broker)
-                {
-                        Current = EditorMode.Match;
-                        _matchMode = new MatchMode(view, broker);
-                        StatusBarHelper.ShowMode(Current);
-                        view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
-                }
+               public void EnterNormal(ITextView view, IMultiSelectionBroker broker)
+               {
+                       Current = EditorMode.Normal;
+                       _searchMode = null;
+                       StatusBarHelper.ShowMode(Current);
+                       view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);  // block caret
 
-                public void EnterNormal(ITextView view, IMultiSelectionBroker broker)
-                {
-                        Current = EditorMode.Normal;
-                        _searchMode = null;
-                        _matchMode = null;
-                        StatusBarHelper.ShowMode(Current);
-                        view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);  // block caret
-
-                }
+               }
 	}
 }
