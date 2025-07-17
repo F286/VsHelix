@@ -60,6 +60,14 @@ namespace VsHelix
                                 ModeManager.Instance.EnterNormal(view, broker);
                                 return true;
                         }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Visual)
+                        {
+                                var view = args.TextView;
+                                var broker = view.GetMultiSelectionBroker();
+                                ModeManager.Instance.EnterNormal(view, broker);
+                                VisualMode.Instance?.Reset();
+                                return true;
+                        }
 
 
 // In normal mode, also cancel 'esc' keys as that would clear multiple selections.

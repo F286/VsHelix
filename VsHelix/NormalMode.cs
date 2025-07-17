@@ -15,10 +15,6 @@ using Microsoft.VisualStudio.Text.Operations;
 
 namespace VsHelix
 {
-	/// <summary>
-	/// Record type for yanked items (used for reliable JSON serialization of yank registers).
-	/// </summary>
-	internal record YankItem(string Text, bool IsLinewise);
 
 	/// <summary>
 	/// Handles key input when in Normal mode. 
@@ -460,46 +456,8 @@ namespace VsHelix
 		/// <summary>
 		/// Extends a selection to whole lines. If the selection is already linewise, extend it to include the next line.
 		/// </summary>
-		private void ExtendSelectionLinewise(ISelectionTransformer transformer, ITextView view)
-		{
-			var snapshot = view.TextSnapshot;
-			var currentSelection = transformer.Selection;
-			var startLine = currentSelection.Start.Position.GetContainingLine();
-			var endLine = currentSelection.End.Position.GetContainingLine();
-
-			// A linewise selection is defined as covering the full line content (excluding the line break).
-			bool isAlreadyLinewise = currentSelection.Start.Position == startLine.Start &&
-									  currentSelection.End.Position == endLine.End;
-
-			VirtualSnapshotPoint newStart, newEnd;
-			if (!isAlreadyLinewise)
-			{
-				// Not currently linewise: expand selection to cover the entire line(s) content.
-				newStart = new VirtualSnapshotPoint(startLine.Start);
-				newEnd = new VirtualSnapshotPoint(endLine.End);
-			}
-			else
-			{
-				// Already a full-line selection: extend to include the next line (if available).
-				if (endLine.LineNumber + 1 < snapshot.LineCount)
-				{
-					var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
-					newStart = new VirtualSnapshotPoint(startLine.Start);
-					newEnd = new VirtualSnapshotPoint(nextLine.End);
-				}
-				else
-				{
-					// At last line – cannot extend further, so remain on the same lines.
-					newStart = new VirtualSnapshotPoint(startLine.Start);
-					newEnd = new VirtualSnapshotPoint(endLine.End);
-				}
-			}
-
-			// Apply the new span (preserve original selection direction).
-			var newSpan = new VirtualSnapshotSpan(newStart, newEnd);
-			transformer.MoveTo(newSpan.Start, false, PositionAffinity.Successor);
-			transformer.MoveTo(newSpan.End, true, PositionAffinity.Successor);
-		}
+               private void ExtendSelectionLinewise(ISelectionTransformer transformer, ITextView view)
+                       => SelectionUtils.ExtendSelectionLinewise(transformer, view);
 
 		/// <summary>
 		/// Inserts a new blank line above or below each selection (preserving indentation) and positions the caret on that new line.
@@ -643,117 +601,26 @@ namespace VsHelix
 		/// <summary>
 		/// Calculates the expanded length of a text segment after replacing tabs with spaces (for alignment calculations).
 		/// </summary>
-		private int CalculateExpandedOffset(string text, int tabSize)
-		{
-			int expandedLength = 0;
-			foreach (char c in text)
-			{
-				if (c == '\t')
-				{
-					// Each tab advances to the next multiple of tabSize.
-					int spacesForTab = tabSize - (expandedLength % tabSize);
-					expandedLength += spacesForTab;
-				}
-				else
-				{
-					expandedLength++;
-				}
-			}
-			return expandedLength;
-		}
+               private int CalculateExpandedOffset(string text, int tabSize)
+                       => SelectionUtils.CalculateExpandedOffset(text, tabSize);
 
 		/// <summary>
 		/// Creates a virtual snapshot point at a given visual offset into a line (accounts for tabs and returns a point with virtual spaces if needed).
 		/// </summary>
-		private VirtualSnapshotPoint CreatePointAtVisualOffset(ITextSnapshotLine line, int visualOffset, int tabSize)
-		{
-			string lineText = line.GetText();
-			int currentVisualOffset = 0;
-			int charOffset = 0;
-
-			// Iterate through characters until reaching the desired visual offset.
-			while (charOffset < lineText.Length && currentVisualOffset < visualOffset)
-			{
-				if (lineText[charOffset] == '\t')
-				{
-					int spacesForTab = tabSize - (currentVisualOffset % tabSize);
-					currentVisualOffset += spacesForTab;
-				}
-				else
-				{
-					currentVisualOffset++;
-				}
-
-				if (currentVisualOffset <= visualOffset)
-				{
-					// Only advance char index if we haven't yet surpassed the target visual offset.
-					charOffset++;
-				}
-			}
-
-			// Any remaining offset distance is virtual space beyond end of line.
-			int virtualSpaces = visualOffset - currentVisualOffset;
-			if (virtualSpaces < 0) virtualSpaces = 0;
-
-			// Create a snapshot point at the computed character position and attach virtual spaces.
-			var basePoint = new SnapshotPoint(line.Snapshot, line.Start.Position + charOffset);
-			return new VirtualSnapshotPoint(basePoint, virtualSpaces);
-		}
+               private VirtualSnapshotPoint CreatePointAtVisualOffset(ITextSnapshotLine line, int visualOffset, int tabSize)
+                       => SelectionUtils.CreatePointAtVisualOffset(line, visualOffset, tabSize);
 
 		/// <summary>
 		/// Deletes the content of all non-empty selections from the buffer.
 		/// </summary>
-		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
-		{
-			// Take a stable snapshot of current selections before modifying the buffer.
-			var selections = broker.AllSelections.ToList();
-			if (!selections.Any())
-				return;
-
-			using (var edit = view.TextBuffer.CreateEdit())
-			{
-				// Delete each selection (process in reverse order for safety in overlapping scenarios).
-				foreach (var sel in selections.OrderByDescending(s => s.Start.Position))
-				{
-					if (sel.IsEmpty) continue;
-
-					// Determine span to delete.
-					var spanToDelete = new SnapshotSpan(sel.Start.Position, sel.End.Position);
-					// If selection covers whole line content (linewise), include the line break in deletion.
-					if (IsLinewiseSelection(sel, view.TextSnapshot))
-					{
-						var endLine = sel.End.Position.GetContainingLine();
-						if (endLine.End.Position < endLine.EndIncludingLineBreak.Position)
-						{
-							spanToDelete = new SnapshotSpan(sel.Start.Position, endLine.EndIncludingLineBreak);
-						}
-					}
-					edit.Delete(spanToDelete);
-				}
-				edit.Apply();
-			}
-
-			// After deletion, collapse any remaining selections to a single caret at the start of the deleted range.
-			broker.PerformActionOnAllSelections(transformer =>
-			{
-				var start = transformer.Selection.Start;
-				transformer.MoveTo(start, false, PositionAffinity.Successor);
-			});
-		}
+               private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
+                       => SelectionUtils.DeleteSelections(view, broker);
 
 		/// <summary>
 		/// Checks if a selection spans whole lines (from the start of a line to the end of that line’s content).
 		/// </summary>
-		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
-		{
-			if (sel.IsEmpty || sel.Start.IsInVirtualSpace || sel.End.IsInVirtualSpace)
-				return false;
-
-			var startLine = sel.Start.Position.GetContainingLine();
-			var endLine = sel.End.Position.GetContainingLine();
-			// True if the selection starts at line beginning and ends exactly at line content end.
-			return sel.Start.Position == startLine.Start && sel.End.Position == endLine.End;
-		}
+               private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
+                       => SelectionUtils.IsLinewiseSelection(sel, snapshot);
 
 		private static bool TryGetBracket(char ch, out char open, out char close)
 		{
@@ -1000,56 +867,8 @@ namespace VsHelix
 		/// <summary>
 		/// Yanks (copies) the current selections to both an internal register and the system clipboard.
 		/// </summary>
-		private void YankSelections(ITextView view, IMultiSelectionBroker broker)
-		{
-			var snapshot = view.TextSnapshot;
-			var selections = broker.AllSelections.ToList();
-			if (selections.Count == 0)
-				return;
-
-			var yankRegister = new List<YankItem>();
-			var concatenatedText = new StringBuilder();
-
-			foreach (var sel in selections)
-			{
-				// Get the text covered by the selection.
-				var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
-				string text = span.GetText();
-				bool isLinewise = IsLinewiseSelection(sel, snapshot);
-
-				// If selection was linewise, append a newline (since selection excluded the line break).
-				if (isLinewise)
-				{
-					text += Environment.NewLine;
-				}
-
-				yankRegister.Add(new YankItem(text, isLinewise));
-				concatenatedText.Append(text);
-			}
-
-			// Prepare clipboard data (add a trailing newline if any yanked content was linewise and missing final newline).
-			string clipboardText = concatenatedText.ToString();
-			if (yankRegister.Any(item => item.IsLinewise) && !clipboardText.EndsWith(Environment.NewLine))
-			{
-				clipboardText += Environment.NewLine;
-			}
-
-			// Create a DataObject to store both plain text and a custom format for yank register.
-			var dataObject = new DataObject();
-			dataObject.SetText(clipboardText);  // plain text format
-												// Custom format: store the yank register as a JSON string.
-			string json = JsonSerializer.Serialize(yankRegister);
-			dataObject.SetData("MyVsHelixYankFormat", json);
-
-			try
-			{
-				Clipboard.SetDataObject(dataObject, true);
-			}
-			catch
-			{
-				// Clipboard operation might fail if the clipboard is locked by another process. Swallow exceptions.
-			}
-		}
+               private void YankSelections(ITextView view, IMultiSelectionBroker broker)
+                       => SelectionUtils.YankSelections(view, broker);
 
 		/// <summary>
 		/// Pastes text from the internal yank register if available; otherwise falls back to system clipboard text.
