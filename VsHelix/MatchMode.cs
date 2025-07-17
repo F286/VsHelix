@@ -230,10 +230,9 @@ namespace VsHelix
 				return;
 
 			var snapshot = _view.TextBuffer.CurrentSnapshot;
-			var toReplace = new List<(int pos, string newText)>();
+			var toReplace = new Dictionary<int, string>();
 			foreach (var sel in _broker.AllSelections)
 			{
-				bool found = false;
 				for (int p = sel.Start.Position - 1; p >= 0; p--)
 				{
 					if (snapshot[p] == fromOpen)
@@ -241,9 +240,8 @@ namespace VsHelix
 						int match = FindMatch(snapshot, p, fromOpen, fromClose, 1, 0);
 						if (match >= 0 && match >= sel.End.Position)
 						{
-							toReplace.Add((p, toOpen.ToString()));
-							toReplace.Add((match, toClose.ToString()));
-							found = true;
+							toReplace[p] = toOpen.ToString();
+							toReplace[match] = toClose.ToString();
 							break;
 						}
 					}
@@ -253,12 +251,12 @@ namespace VsHelix
 			if (toReplace.Count == 0)
 				return;
 
-			var ordered = toReplace.OrderByDescending(t => t.pos).ToList();
+			var ordered = toReplace.OrderByDescending(kv => kv.Key).ToList();
 			using (var edit = _view.TextBuffer.CreateEdit())
 			{
-				foreach (var t in ordered)
+				foreach (var kv in ordered)
 				{
-					edit.Replace(t.pos, 1, t.newText);
+					edit.Replace(kv.Key, 1, kv.Value);
 				}
 				edit.Apply();
 			}
