@@ -24,7 +24,7 @@ namespace VsHelix
 		public static ModeManager Instance => lazyInstance.Value;
 
 		// --- Your existing class members ---
-               public enum EditorMode { Normal, Insert, Visual, Search, Goto }
+		public enum EditorMode { Normal, Insert, Visual, Search, Goto }
 		public EditorMode Current { get; private set; } = EditorMode.Normal;
 
 		private SearchMode? _searchMode;
@@ -38,34 +38,34 @@ namespace VsHelix
 			return componentModel.GetService<ITextSearchService2>();
 		}
 
-                public void EnterInsert(ITextView view, IMultiSelectionBroker broker)
-                {
-                        Current = EditorMode.Insert;
-                        StatusBarHelper.ShowMode(Current);
-                        view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, false);
-                }
+		public void EnterInsert(ITextView view, IMultiSelectionBroker broker)
+		{
+			Current = EditorMode.Insert;
+			StatusBarHelper.ShowMode(Current);
+			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, false);
+		}
 
-               public void EnterVisual(ITextView view, IMultiSelectionBroker broker)
-               {
-                       Current = EditorMode.Visual;
-                       StatusBarHelper.ShowMode(Current);
-                       view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
-               }
+		public void EnterVisual(ITextView view, IMultiSelectionBroker broker)
+		{
+			Current = EditorMode.Visual;
+			StatusBarHelper.ShowMode(Current);
+			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
+		}
 
-               public void EnterSearch(ITextView view, IMultiSelectionBroker broker, bool selectAll, System.Collections.Generic.List<SnapshotSpan> domain)
-               {
-                       Current = EditorMode.Search;
-                       _searchMode = new SearchMode(selectAll, view, broker, domain, GetSearchService());
-                       StatusBarHelper.ShowMode(Current);
-                       view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
-               }
+		public void EnterSearch(ITextView view, IMultiSelectionBroker broker, bool selectAll, System.Collections.Generic.List<SnapshotSpan> domain)
+		{
+			Current = EditorMode.Search;
+			_searchMode = new SearchMode(selectAll, view, broker, domain, GetSearchService());
+			StatusBarHelper.ShowMode(Current);
+			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
+		}
 
-               public void EnterGoto(ITextView view, IMultiSelectionBroker broker)
-               {
-                       Current = EditorMode.Goto;
-                       StatusBarHelper.ShowMode(Current);
-                       view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
-               }
+		public void EnterGoto(ITextView view, IMultiSelectionBroker broker)
+		{
+			Current = EditorMode.Goto;
+			StatusBarHelper.ShowMode(Current);
+			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
+		}
 
 		public void EnterNormal(ITextView view, IMultiSelectionBroker broker)
 		{

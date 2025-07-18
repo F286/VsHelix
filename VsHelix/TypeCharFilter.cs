@@ -24,10 +24,10 @@ namespace VsHelix
 		private const string ModeKey = nameof(TypeCharFilter) + "_mode";
 
 		private readonly IEditorOperationsFactoryService _editorOperationsFactory;
-                private readonly IInputMode _insertMode = new InsertMode();
-                private readonly IInputMode _normalMode = new NormalMode();
-                private readonly IInputMode _visualMode = new VisualMode();
-                private readonly IInputMode _gotoMode = new GotoMode();
+		private readonly IInputMode _insertMode = new InsertMode();
+		private readonly IInputMode _normalMode = new NormalMode();
+		private readonly IInputMode _visualMode = new VisualMode();
+		private readonly IInputMode _gotoMode = new GotoMode();
 
 		[ImportingConstructor]
 		internal TypeCharFilter(IEditorOperationsFactoryService editorOperationsFactory)
@@ -46,26 +46,26 @@ namespace VsHelix
 			var broker = view.GetMultiSelectionBroker();
 			var ops = _editorOperationsFactory.GetEditorOperations(view);
 
-                        if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
-                        {
-                                return _normalMode.HandleChar(args.TypedChar, view, broker, ops);
-                        }
-                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
-                        {
-                                return _insertMode.HandleChar(args.TypedChar, view, broker, ops);
-                        }
-                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Visual)
-                        {
-                                return _visualMode.HandleChar(args.TypedChar, view, broker, ops);
-                        }
-                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Goto)
-                        {
-                                return _gotoMode.HandleChar(args.TypedChar, view, broker, ops);
-                        }
-                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
-                        {
-                                return ModeManager.Instance.Search.HandleChar(args.TypedChar, view, broker, ops);
-                        }
+			if (ModeManager.Instance.Current == ModeManager.EditorMode.Normal)
+			{
+				return _normalMode.HandleChar(args.TypedChar, view, broker, ops);
+			}
+			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Insert)
+			{
+				return _insertMode.HandleChar(args.TypedChar, view, broker, ops);
+			}
+			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Visual)
+			{
+				return _visualMode.HandleChar(args.TypedChar, view, broker, ops);
+			}
+			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Goto)
+			{
+				return _gotoMode.HandleChar(args.TypedChar, view, broker, ops);
+			}
+			else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
+			{
+				return ModeManager.Instance.Search.HandleChar(args.TypedChar, view, broker, ops);
+			}
 
 			return false;
 		}

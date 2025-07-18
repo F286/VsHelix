@@ -220,19 +220,19 @@ namespace VsHelix
 				ModeManager.Instance.EnterInsert(view, broker);
 				return true;
 			});
-                        _keymap.Add("O", (c, view, broker, ops) =>
-                        {
-                                // Open a new line *above* each selection and enter Insert mode.
-                                AddLine(view, broker, ops, above: true);
-                                ModeManager.Instance.EnterInsert(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("g", (c, view, broker, ops) =>
-                        {
-                                ModeManager.Instance.EnterGoto(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("m", null); // prefix for match commands
+			_keymap.Add("O", (c, view, broker, ops) =>
+			{
+				// Open a new line *above* each selection and enter Insert mode.
+				AddLine(view, broker, ops, above: true);
+				ModeManager.Instance.EnterInsert(view, broker);
+				return true;
+			});
+			_keymap.Add("g", (c, view, broker, ops) =>
+			{
+				ModeManager.Instance.EnterGoto(view, broker);
+				return true;
+			});
+			_keymap.Add("m", null); // prefix for match commands
 			_keymap.Add("mm", (c, view, broker, ops) =>
 			{
 				broker.PerformActionOnAllSelections(sel => GoToMatchingBracket(sel));

@@ -9,8 +9,8 @@ namespace VsHelix
 	/// <summary>
 	/// Defines the contract for a mode handler.
 	/// </summary>
-       internal interface IInputMode
-       {
-               bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
-       }
+	internal interface IInputMode
+	{
+		bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
+	}
 }

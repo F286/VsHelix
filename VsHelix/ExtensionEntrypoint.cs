@@ -3,22 +3,22 @@ using Microsoft.VisualStudio.Extensibility;
 
 namespace VsHelix
 {
-    /// <summary>
-    /// Extension entrypoint for the VisualStudio.Extensibility extension.
-    /// </summary>
-    [VisualStudioContribution]
-    internal class ExtensionEntrypoint : Extension
-    {
-        /// <inheritdoc />
-        public override ExtensionConfiguration ExtensionConfiguration => new()
-        {
-            RequiresInProcessHosting = true,
-        };
+	/// <summary>
+	/// Extension entrypoint for the VisualStudio.Extensibility extension.
+	/// </summary>
+	[VisualStudioContribution]
+	internal class ExtensionEntrypoint : Extension
+	{
+		/// <inheritdoc />
+		public override ExtensionConfiguration ExtensionConfiguration => new()
+		{
+			RequiresInProcessHosting = true,
+		};
 
-        /// <inheritdoc />
-        protected override void InitializeServices(IServiceCollection serviceCollection)
-        {
-            base.InitializeServices(serviceCollection);
+		/// <inheritdoc />
+		protected override void InitializeServices(IServiceCollection serviceCollection)
+		{
+			base.InitializeServices(serviceCollection);
 		}
-    }
+	}
 }

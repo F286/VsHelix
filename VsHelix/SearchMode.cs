@@ -139,53 +139,53 @@ namespace VsHelix
 		private readonly SnapshotPoint _start;
 		private string _query = string.Empty;
 		private readonly ITextSearchService2 _searchService;
-               private readonly SearchHighlightTagger _highlighter;
+		private readonly SearchHighlightTagger _highlighter;
 
-               private delegate bool CommandHandler(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
-               private readonly Keymap _keymap;
+		private delegate bool CommandHandler(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations);
+		private readonly Keymap _keymap;
 
-               public SearchMode(bool selectAll, ITextView view, IMultiSelectionBroker broker, List<SnapshotSpan> domain, ITextSearchService2 searchService)
-               {
-                       _selectAllMatches = selectAll;
-                       _view = view;
-                       _broker = broker;
-                       _buffer = view.TextBuffer;
-                       _domain = domain;
-                       _start = view.Caret.Position.BufferPosition;
-                       _searchService = searchService;
+		public SearchMode(bool selectAll, ITextView view, IMultiSelectionBroker broker, List<SnapshotSpan> domain, ITextSearchService2 searchService)
+		{
+			_selectAllMatches = selectAll;
+			_view = view;
+			_broker = broker;
+			_buffer = view.TextBuffer;
+			_domain = domain;
+			_start = view.Caret.Position.BufferPosition;
+			_searchService = searchService;
 
-                       // Get the highlighter tagger from view properties
-                       _highlighter = _view.Properties.GetProperty<SearchHighlightTagger>("SearchHighlightTagger");
+			// Get the highlighter tagger from view properties
+			_highlighter = _view.Properties.GetProperty<SearchHighlightTagger>("SearchHighlightTagger");
 
-                       _keymap = new Keymap();
-                       _keymap.Add("n", (c, v, b, o) => { CycleMatch(true); return true; });
-                       _keymap.Add("N", (c, v, b, o) => { CycleMatch(false); return true; });
-                       _keymap.Add("\b", (c, v, b, o) => { if (_query.Length > 0) { _query = _query.Substring(0, _query.Length - 1); UpdateMatches(); } return true; });
-                       _keymap.Add("\r", (c, v, b, o) => { if (SelectionManager.Instance.HasSavedSelections) SelectionManager.Instance.ClearSelections(); Finish(); return true; });
-                       _keymap.Add("\u001b", (c, v, b, o) => { if (SelectionManager.Instance.HasSavedSelections) SelectionManager.Instance.RestoreSelections(_broker); _highlighter.UpdateHighlights(System.Linq.Enumerable.Empty<SnapshotSpan>()); ModeManager.Instance.EnterNormal(_view, _broker); return true; });
+			_keymap = new Keymap();
+			_keymap.Add("n", (c, v, b, o) => { CycleMatch(true); return true; });
+			_keymap.Add("N", (c, v, b, o) => { CycleMatch(false); return true; });
+			_keymap.Add("\b", (c, v, b, o) => { if (_query.Length > 0) { _query = _query.Substring(0, _query.Length - 1); UpdateMatches(); } return true; });
+			_keymap.Add("\r", (c, v, b, o) => { if (SelectionManager.Instance.HasSavedSelections) SelectionManager.Instance.ClearSelections(); Finish(); return true; });
+			_keymap.Add("\u001b", (c, v, b, o) => { if (SelectionManager.Instance.HasSavedSelections) SelectionManager.Instance.RestoreSelections(_broker); _highlighter.UpdateHighlights(System.Linq.Enumerable.Empty<SnapshotSpan>()); ModeManager.Instance.EnterNormal(_view, _broker); return true; });
 
-                       UpdateStatus();
-               }
+			UpdateStatus();
+		}
 
 
 
-               public bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
-               {
-                       if (_keymap.TryGetCommand(ch, out var handler))
-                       {
-                               if (handler != null)
-                                       return handler(ch, view, broker, operations);
-                               return true;
-                       }
+		public bool HandleChar(char ch, ITextView view, IMultiSelectionBroker broker, IEditorOperations operations)
+		{
+			if (_keymap.TryGetCommand(ch, out var handler))
+			{
+				if (handler != null)
+					return handler(ch, view, broker, operations);
+				return true;
+			}
 
-                       if (!char.IsControl(ch))
-                       {
-                               _query += ch;
-                               UpdateMatches();
-                       }
-                       return true;
-               }
-		
+			if (!char.IsControl(ch))
+			{
+				_query += ch;
+				UpdateMatches();
+			}
+			return true;
+		}
+
 		public void HandleBackspace()
 		{
 			if (_query.Length > 0)
@@ -287,46 +287,46 @@ namespace VsHelix
 				}
 			}
 
-		UpdateStatus();
+			UpdateStatus();
 		}
-		
+
 		private void CycleMatch(bool forward)
 		{
-		if (string.IsNullOrEmpty(_query))
-		return;
-		
-		var matches = GetCurrentMatches();
-		if (matches.Count == 0)
-		return;
-		
-		var ordered = matches.OrderBy(s => s.Start.Position).ToList();
-		var currentPos = _view.Caret.Position.BufferPosition.Position;
-		
-		SnapshotSpan? target = null;
-		if (forward)
+			if (string.IsNullOrEmpty(_query))
+				return;
+
+			var matches = GetCurrentMatches();
+			if (matches.Count == 0)
+				return;
+
+			var ordered = matches.OrderBy(s => s.Start.Position).ToList();
+			var currentPos = _view.Caret.Position.BufferPosition.Position;
+
+			SnapshotSpan? target = null;
+			if (forward)
+			{
+				target = ordered.FirstOrDefault(s => s.Start.Position > currentPos);
+				if (!target.HasValue)
+					target = ordered.First();
+			}
+			else
+			{
+				target = ordered.LastOrDefault(s => s.Start.Position < currentPos);
+				if (!target.HasValue)
+					target = ordered.Last();
+			}
+
+			if (target.HasValue)
+			{
+				_broker.ClearSecondarySelections();
+				_view.Selection.Select(target.Value, true);
+				_view.DisplayTextLineContainingBufferPosition(target.Value.Start, 0, ViewRelativePosition.Top);
+			}
+		}
+
+		// Helper to retrieve current matches (assuming UpdateMatches can be called to cache if needed; for simplicity, recalculate or add caching if performance issue)
+		private List<SnapshotSpan> GetCurrentMatches()
 		{
-		target = ordered.FirstOrDefault(s => s.Start.Position > currentPos);
-		if (!target.HasValue)
-		target = ordered.First();
-		}
-		else
-		{
-		target = ordered.LastOrDefault(s => s.Start.Position < currentPos);
-		if (!target.HasValue)
-		target = ordered.Last();
-		}
-		
-		if (target.HasValue)
-		{
-		_broker.ClearSecondarySelections();
-		_view.Selection.Select(target.Value, true);
-		_view.DisplayTextLineContainingBufferPosition(target.Value.Start, 0, ViewRelativePosition.Top);
-		}
-		}
-		
-				// Helper to retrieve current matches (assuming UpdateMatches can be called to cache if needed; for simplicity, recalculate or add caching if performance issue)
-				private List<SnapshotSpan> GetCurrentMatches()
-				{
 			// For now, recalculate; optimize if needed
 			var findOptions = FindOptions.UseRegularExpressions | FindOptions.MatchCase;
 			var matches = new List<SnapshotSpan>();
