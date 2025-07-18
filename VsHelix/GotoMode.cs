@@ -165,7 +165,19 @@ private static void ExecuteCommand(string command)
 {
 ThreadHelper.ThrowIfNotOnUIThread();
 var dte = ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE;
-dte?.ExecuteCommand(command);
+if (dte == null)
+return;
+
+try
+{
+var cmd = dte.Commands.Item(command);
+if (cmd != null && cmd.IsAvailable)
+dte.ExecuteCommand(command);
+}
+catch (Exception)
+{
+// Ignore unavailable commands
+}
 }
 
 private static void MoveDown(IMultiSelectionBroker broker)
