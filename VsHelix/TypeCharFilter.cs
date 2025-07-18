@@ -27,6 +27,7 @@ namespace VsHelix
                 private readonly IInputMode _insertMode = new InsertMode();
                 private readonly IInputMode _normalMode = new NormalMode();
                 private readonly IInputMode _visualMode = new VisualMode();
+                private readonly IInputMode _gotoMode = new GotoMode();
 
 		[ImportingConstructor]
 		internal TypeCharFilter(IEditorOperationsFactoryService editorOperationsFactory)
@@ -56,6 +57,10 @@ namespace VsHelix
                         else if (ModeManager.Instance.Current == ModeManager.EditorMode.Visual)
                         {
                                 return _visualMode.HandleChar(args.TypedChar, view, broker, ops);
+                        }
+                        else if (ModeManager.Instance.Current == ModeManager.EditorMode.Goto)
+                        {
+                                return _gotoMode.HandleChar(args.TypedChar, view, broker, ops);
                         }
                         else if (ModeManager.Instance.Current == ModeManager.EditorMode.Search && ModeManager.Instance.Search != null)
                         {
