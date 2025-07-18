@@ -327,23 +327,23 @@ namespace VsHelix
 				Paste(view, broker);
 				return true;
 			});
-                        _keymap.Add("C", (c, view, broker, ops) =>
-                        {
-                                // Add a new caret below the last selection (multi-cursor).
-                                AddCaretBelowLastSelection(view, broker);
-                                return true;
-                        });
-                        _keymap.Add("K", (c, view, broker, ops) =>
-                        {
-                                // Add a new caret above the first selection (multi-cursor).
-                                AddCaretAboveFirstSelection(view, broker);
-                                return true;
-                        });
-                        _keymap.Add(",", (c, view, broker, ops) =>
-                        {
-                                // Clear all secondary selections, keeping only the primary.
-                                broker.ClearSecondarySelections();
-                                return true;
+			_keymap.Add("C", (c, view, broker, ops) =>
+			{
+				// Add a new caret below the last selection (multi-cursor).
+				AddCaretBelowLastSelection(view, broker);
+				return true;
+			});
+			_keymap.Add("K", (c, view, broker, ops) =>
+			{
+				// Add a new caret above the first selection (multi-cursor).
+				AddCaretAboveFirstSelection(view, broker);
+				return true;
+			});
+			_keymap.Add(",", (c, view, broker, ops) =>
+			{
+				// Clear all secondary selections, keeping only the primary.
+				broker.ClearSecondarySelections();
+				return true;
 			});
 		}
 
@@ -414,6 +414,10 @@ namespace VsHelix
 
 						result &= handler(c, view, broker, operations);
 					}
+
+					// Ensure the primary caret is visible after executing the command.
+					view.Caret.EnsureVisible();
+
 					return result;
 				}
 				return true; // awaiting more keys
@@ -421,6 +425,7 @@ namespace VsHelix
 
 			_pendingCount = 0;
 			_keymap.Reset();
+
 			// Unrecognized key in Normal mode: consume without inserting.
 			return true;
 		}
@@ -467,8 +472,8 @@ namespace VsHelix
 		/// <summary>
 		/// Extends a selection to whole lines. If the selection is already linewise, extend it to include the next line.
 		/// </summary>
-               private void ExtendSelectionLinewise(ISelectionTransformer transformer, ITextView view)
-                       => SelectionUtils.ExtendSelectionLinewise(transformer, view);
+		private void ExtendSelectionLinewise(ISelectionTransformer transformer, ITextView view)
+				=> SelectionUtils.ExtendSelectionLinewise(transformer, view);
 
 		/// <summary>
 		/// Inserts a new blank line above or below each selection (preserving indentation) and positions the caret on that new line.
@@ -526,8 +531,8 @@ namespace VsHelix
 		/// <summary>
 		/// Adds a new caret below the last selection, aligning it vertically with the original selection’s start/end.
 		/// </summary>
-                private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
-                {
+		private void AddCaretBelowLastSelection(ITextView view, IMultiSelectionBroker broker)
+		{
 			// Find the bottom-most selection (last in document order).
 			var bottomSelection = broker.AllSelections
 										.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber)
@@ -589,47 +594,47 @@ namespace VsHelix
 				? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)   // reversed selection
 				: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);  // forward selection
 
-                        broker.AddSelection(newSelection);
-                }
+			broker.AddSelection(newSelection);
+		}
 
-                /// <summary>
-                /// Adds a new caret above the first selection, preserving column and range.
-                /// </summary>
-                private void AddCaretAboveFirstSelection(ITextView view, IMultiSelectionBroker broker)
-                {
-                        var topSelection = broker.AllSelections
-                                                       .OrderBy(s => s.Start.Position.GetContainingLine().LineNumber)
-                                                       .ThenBy(s => s.Start.Position.Position)
-                                                       .FirstOrDefault();
-                        if (topSelection == null)
-                                return;
+		/// <summary>
+		/// Adds a new caret above the first selection, preserving column and range.
+		/// </summary>
+		private void AddCaretAboveFirstSelection(ITextView view, IMultiSelectionBroker broker)
+		{
+			var topSelection = broker.AllSelections
+										   .OrderBy(s => s.Start.Position.GetContainingLine().LineNumber)
+										   .ThenBy(s => s.Start.Position.Position)
+										   .FirstOrDefault();
+			if (topSelection == null)
+				return;
 
-                        var snapshot = view.TextSnapshot;
-                        var startLine = topSelection.Start.Position.GetContainingLine();
-                        var endLine = topSelection.End.Position.GetContainingLine();
-                        if (startLine.LineNumber != endLine.LineNumber)
-                                return;
-                        if (startLine.LineNumber == 0)
-                                return;
+			var snapshot = view.TextSnapshot;
+			var startLine = topSelection.Start.Position.GetContainingLine();
+			var endLine = topSelection.End.Position.GetContainingLine();
+			if (startLine.LineNumber != endLine.LineNumber)
+				return;
+			if (startLine.LineNumber == 0)
+				return;
 
-                        int tabSize = view.Options.GetTabSize();
-                        string lineText = startLine.GetText();
-                        int startOffset = CalculateExpandedOffset(lineText.Substring(0, topSelection.Start.Position - startLine.Start), tabSize) + topSelection.Start.VirtualSpaces;
-                        int endOffset = CalculateExpandedOffset(lineText.Substring(0, topSelection.End.Position - startLine.Start), tabSize) + topSelection.End.VirtualSpaces;
-                        int requiredOffset = Math.Max(startOffset, endOffset);
+			int tabSize = view.Options.GetTabSize();
+			string lineText = startLine.GetText();
+			int startOffset = CalculateExpandedOffset(lineText.Substring(0, topSelection.Start.Position - startLine.Start), tabSize) + topSelection.Start.VirtualSpaces;
+			int endOffset = CalculateExpandedOffset(lineText.Substring(0, topSelection.End.Position - startLine.Start), tabSize) + topSelection.End.VirtualSpaces;
+			int requiredOffset = Math.Max(startOffset, endOffset);
 
-                        var prevLine = snapshot.GetLineFromLineNumber(startLine.LineNumber - 1);
-                        int prevLen = CalculateExpandedOffset(prevLine.GetText(), tabSize);
-                        if (prevLen < requiredOffset)
-                                return;
+			var prevLine = snapshot.GetLineFromLineNumber(startLine.LineNumber - 1);
+			int prevLen = CalculateExpandedOffset(prevLine.GetText(), tabSize);
+			if (prevLen < requiredOffset)
+				return;
 
-                        var newStartPoint = CreatePointAtVisualOffset(prevLine, startOffset, tabSize);
-                        var newEndPoint = CreatePointAtVisualOffset(prevLine, endOffset, tabSize);
-                        var newSel = topSelection.IsReversed
-                                ? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)
-                                : new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);
-                        broker.AddSelection(newSel);
-                }
+			var newStartPoint = CreatePointAtVisualOffset(prevLine, startOffset, tabSize);
+			var newEndPoint = CreatePointAtVisualOffset(prevLine, endOffset, tabSize);
+			var newSel = topSelection.IsReversed
+					? new Microsoft.VisualStudio.Text.Selection(newEndPoint, newStartPoint)
+					: new Microsoft.VisualStudio.Text.Selection(newStartPoint, newEndPoint);
+			broker.AddSelection(newSel);
+		}
 
 		private System.Collections.Generic.List<SnapshotSpan> GetSearchDomain(ITextView view, IMultiSelectionBroker broker)
 		{
@@ -651,26 +656,26 @@ namespace VsHelix
 		/// <summary>
 		/// Calculates the expanded length of a text segment after replacing tabs with spaces (for alignment calculations).
 		/// </summary>
-               private int CalculateExpandedOffset(string text, int tabSize)
-                       => SelectionUtils.CalculateExpandedOffset(text, tabSize);
+		private int CalculateExpandedOffset(string text, int tabSize)
+				=> SelectionUtils.CalculateExpandedOffset(text, tabSize);
 
 		/// <summary>
 		/// Creates a virtual snapshot point at a given visual offset into a line (accounts for tabs and returns a point with virtual spaces if needed).
 		/// </summary>
-               private VirtualSnapshotPoint CreatePointAtVisualOffset(ITextSnapshotLine line, int visualOffset, int tabSize)
-                       => SelectionUtils.CreatePointAtVisualOffset(line, visualOffset, tabSize);
+		private VirtualSnapshotPoint CreatePointAtVisualOffset(ITextSnapshotLine line, int visualOffset, int tabSize)
+				=> SelectionUtils.CreatePointAtVisualOffset(line, visualOffset, tabSize);
 
 		/// <summary>
 		/// Deletes the content of all non-empty selections from the buffer.
 		/// </summary>
-               private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
-                       => SelectionUtils.DeleteSelections(view, broker);
+		private void DeleteSelection(ITextView view, IMultiSelectionBroker broker)
+				=> SelectionUtils.DeleteSelections(view, broker);
 
 		/// <summary>
 		/// Checks if a selection spans whole lines (from the start of a line to the end of that line’s content).
 		/// </summary>
-               private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
-                       => SelectionUtils.IsLinewiseSelection(sel, snapshot);
+		private bool IsLinewiseSelection(Microsoft.VisualStudio.Text.Selection sel, ITextSnapshot snapshot)
+				=> SelectionUtils.IsLinewiseSelection(sel, snapshot);
 
 		private static bool TryGetBracket(char ch, out char open, out char close)
 		{
@@ -917,8 +922,8 @@ namespace VsHelix
 		/// <summary>
 		/// Yanks (copies) the current selections to both an internal register and the system clipboard.
 		/// </summary>
-               private void YankSelections(ITextView view, IMultiSelectionBroker broker)
-                       => SelectionUtils.YankSelections(view, broker);
+		private void YankSelections(ITextView view, IMultiSelectionBroker broker)
+				=> SelectionUtils.YankSelections(view, broker);
 
 		/// <summary>
 		/// Pastes text from the internal yank register if available; otherwise falls back to system clipboard text.
