@@ -66,4 +66,4 @@ Press `m` followed by another key to manipulate matching pairs:
 `mr<from><to>` replaces the surrounding characters, `md<char>` removes the
 surrounding pair, and `ma`/`mi <char>` select around or inside a pair.
 Press `v` toggles Visual mode where movements extend the current selections.
-While in Visual mode, `y`, `d`, and `c` operate on the selection and return to Normal mode.
+While in Visual mode, motions grow the selection with a fixed anchor. Use `y`, `d`, `c`, or `p` to yank, delete, change, or replace the selections. `C` and `K` duplicate the selections down or up to form multi-line blocks. Hitting <kbd>Esc</kbd> leaves Visual mode but keeps the selection active in Normal mode.

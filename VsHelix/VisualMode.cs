@@ -1,6 +1,11 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Windows;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Editor.Commanding.Commands;
 using Microsoft.VisualStudio.Text.Operations;
 
@@ -106,6 +111,12 @@ _keymap.Add("c", (c, view, broker, ops) =>
 ExecuteDeleteCommand(view, broker, true);
 return true;
 });
+_keymap.Add("p", (c, view, broker, ops) =>
+{
+PasteReplaceSelections(view, broker);
+ModeManager.Instance.EnterNormal(view, broker);
+return true;
+});
 
 _keymap.Add("x", (c, view, broker, ops) =>
 {
@@ -116,6 +127,17 @@ return true;
 _keymap.Add("v", (c, view, broker, ops) =>
 {
 ModeManager.Instance.EnterNormal(view, broker);
+return true;
+});
+
+_keymap.Add("C", (c, view, broker, ops) =>
+{
+AddCaretBelowSelections(view, broker);
+return true;
+});
+_keymap.Add("K", (c, view, broker, ops) =>
+{
+AddCaretAboveSelections(view, broker);
 return true;
 });
 }
@@ -169,6 +191,99 @@ if (switchToInsert)
 ModeManager.Instance.EnterInsert(view, broker);
 }
 return true;
+}
+
+private void PasteReplaceSelections(ITextView view, IMultiSelectionBroker broker)
+{
+var selections = broker.AllSelections.ToList();
+if (selections.Count == 0) return;
+
+List<YankItem> pasteItems = null;
+IDataObject data = Clipboard.GetDataObject();
+if (data != null)
+{
+if (data.GetDataPresent("MyVsHelixYankFormat"))
+{
+string json = (string)data.GetData("MyVsHelixYankFormat");
+pasteItems = JsonSerializer.Deserialize<List<YankItem>>(json);
+}
+else if (data.GetDataPresent(DataFormats.Text))
+{
+string text = (string)data.GetData(DataFormats.Text);
+bool linewise = text.EndsWith(Environment.NewLine);
+pasteItems = new List<YankItem> { new YankItem(text, linewise) };
+}
+}
+if (pasteItems == null || pasteItems.Count == 0) return;
+
+using (var edit = view.TextBuffer.CreateEdit())
+{
+foreach (var sel in selections.OrderByDescending(s => s.Start.Position.Position))
+{
+var span = new SnapshotSpan(sel.Start.Position, sel.End.Position);
+if (SelectionUtils.IsLinewiseSelection(sel, view.TextSnapshot))
+{
+var endLine = sel.End.Position.GetContainingLine();
+if (endLine.End.Position < endLine.EndIncludingLineBreak.Position)
+span = new SnapshotSpan(sel.Start.Position, endLine.EndIncludingLineBreak);
+}
+YankItem item = pasteItems[(selections.IndexOf(sel)) % pasteItems.Count];
+edit.Replace(span, item.Text);
+}
+edit.Apply();
+}
+}
+
+private void AddCaretBelowSelections(ITextView view, IMultiSelectionBroker broker)
+{
+var snapshot = view.TextSnapshot;
+int tabSize = view.Options.GetTabSize();
+var current = broker.AllSelections.ToList();
+
+foreach (var sel in current.OrderByDescending(s => s.End.Position.GetContainingLine().LineNumber))
+{
+var startLine = sel.Start.Position.GetContainingLine();
+var endLine = sel.End.Position.GetContainingLine();
+if (startLine.LineNumber != endLine.LineNumber) continue;
+if (endLine.LineNumber + 1 >= snapshot.LineCount) continue;
+var nextLine = snapshot.GetLineFromLineNumber(endLine.LineNumber + 1);
+string lineText = startLine.GetText();
+int startOffset = SelectionUtils.CalculateExpandedOffset(lineText.Substring(0, sel.Start.Position - startLine.Start), tabSize) + sel.Start.VirtualSpaces;
+int endOffset = SelectionUtils.CalculateExpandedOffset(lineText.Substring(0, sel.End.Position - startLine.Start), tabSize) + sel.End.VirtualSpaces;
+int required = Math.Max(startOffset, endOffset);
+int nextLen = SelectionUtils.CalculateExpandedOffset(nextLine.GetText(), tabSize);
+if (nextLen < required) continue;
+var newStart = SelectionUtils.CreatePointAtVisualOffset(nextLine, startOffset, tabSize);
+var newEnd = SelectionUtils.CreatePointAtVisualOffset(nextLine, endOffset, tabSize);
+Selection newSel = sel.IsReversed ? new Selection(newEnd, newStart) : new Selection(newStart, newEnd);
+broker.AddSelection(newSel);
+}
+}
+
+private void AddCaretAboveSelections(ITextView view, IMultiSelectionBroker broker)
+{
+var snapshot = view.TextSnapshot;
+int tabSize = view.Options.GetTabSize();
+var current = broker.AllSelections.ToList();
+
+foreach (var sel in current.OrderBy(s => s.Start.Position.GetContainingLine().LineNumber))
+{
+var startLine = sel.Start.Position.GetContainingLine();
+var endLine = sel.End.Position.GetContainingLine();
+if (startLine.LineNumber != endLine.LineNumber) continue;
+if (startLine.LineNumber == 0) continue;
+var prevLine = snapshot.GetLineFromLineNumber(startLine.LineNumber - 1);
+string lineText = startLine.GetText();
+int startOffset = SelectionUtils.CalculateExpandedOffset(lineText.Substring(0, sel.Start.Position - startLine.Start), tabSize) + sel.Start.VirtualSpaces;
+int endOffset = SelectionUtils.CalculateExpandedOffset(lineText.Substring(0, sel.End.Position - startLine.Start), tabSize) + sel.End.VirtualSpaces;
+int required = Math.Max(startOffset, endOffset);
+int prevLen = SelectionUtils.CalculateExpandedOffset(prevLine.GetText(), tabSize);
+if (prevLen < required) continue;
+var newStart = SelectionUtils.CreatePointAtVisualOffset(prevLine, startOffset, tabSize);
+var newEnd = SelectionUtils.CreatePointAtVisualOffset(prevLine, endOffset, tabSize);
+Selection newSel = sel.IsReversed ? new Selection(newEnd, newStart) : new Selection(newStart, newEnd);
+broker.AddSelection(newSel);
+}
 }
 
 internal void Reset()

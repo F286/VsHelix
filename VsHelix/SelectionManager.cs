@@ -14,12 +14,12 @@ namespace VsHelix
 		public ITrackingPoint ActivePoint { get; }
 		public bool IsReversed { get; }
 
-		public TrackedSelection(Selection selection, ITextSnapshot snapshot)
-		{
-			AnchorPoint = snapshot.CreateTrackingPoint(selection.Start.Position, PointTrackingMode.Positive);
-			ActivePoint = snapshot.CreateTrackingPoint(selection.End.Position, PointTrackingMode.Positive);
-			//IsReversed = selection.IsReversed;
-		}
+               public TrackedSelection(Selection selection, ITextSnapshot snapshot)
+               {
+                       AnchorPoint = snapshot.CreateTrackingPoint(selection.Start.Position, PointTrackingMode.Positive);
+                       ActivePoint = snapshot.CreateTrackingPoint(selection.End.Position, PointTrackingMode.Positive);
+                       IsReversed = selection.IsReversed;
+               }
 	}
 
 	/// <summary>
