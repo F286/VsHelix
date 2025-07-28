@@ -159,27 +159,21 @@ namespace VsHelix
 
 
 				// Word-wise movements (clear selection then extend)
-				['w'] = sel =>
-				{
-					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-					sel.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord);
-				},  // Next sub-word
-				['W'] = sel =>
-				{
-					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-					sel.PerformAction(PredefinedSelectionTransformations.SelectToNextWord);
-				},  // Next Word
-				['b'] = sel =>
-				{
-					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-					sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousSubWord);
-				},  // Previous sub-word
-				['B'] = sel =>
-				{
-					sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
-					sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
-				}   // Previous Word
-			};
+                               ['w'] = sel =>
+                               {
+                                       sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                       sel.PerformAction(PredefinedSelectionTransformations.SelectToNextWord);
+                               },  // Next word
+                               ['W'] = sel => MoveToNextBigWordStart(sel, extend: false),
+                               ['b'] = sel =>
+                               {
+                                       sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+                                       sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord);
+                               },  // Previous word
+                               ['B'] = sel => MoveToPreviousBigWordStart(sel, extend: false),
+                               ['e'] = sel => MoveToNextWordEnd(sel, extend: false),
+                               ['E'] = sel => MoveToNextBigWordEnd(sel, extend: false)
+                       };
 
 			// Register all movement commands to the command map.
 			foreach (var kvp in movementCommands)
@@ -992,8 +986,90 @@ namespace VsHelix
 			// (Optional enhancement: move each caret to the end of its pasted text, if desired.)
 		}
 
-		internal void Reset()
-		{
+	private void MoveToNextBigWordStart(ISelectionTransformer sel, bool extend)
+	{
+	        if (!extend)
+	                sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+
+	        var snapshot = sel.Selection.ActivePoint.Position.Snapshot;
+	        int pos = sel.Selection.ActivePoint.Position.Position;
+
+	        while (pos < snapshot.Length && !char.IsWhiteSpace(snapshot[pos]))
+	        {
+	                sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                pos++;
+	        }
+	        while (pos < snapshot.Length && char.IsWhiteSpace(snapshot[pos]))
+	        {
+	                sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                pos++;
+	        }
+	}
+
+	private void MoveToPreviousBigWordStart(ISelectionTransformer sel, bool extend)
+	{
+	        if (!extend)
+	                sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+
+	        var snapshot = sel.Selection.ActivePoint.Position.Snapshot;
+	        int pos = sel.Selection.ActivePoint.Position.Position;
+
+	        while (pos > 0 && char.IsWhiteSpace(snapshot[pos - 1]))
+	        {
+	                sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+	                pos--;
+	        }
+	        while (pos > 0 && !char.IsWhiteSpace(snapshot[pos - 1]))
+	        {
+	                sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+	                pos--;
+	        }
+	}
+
+	private static bool IsWordChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
+
+	private void MoveToNextWordEnd(ISelectionTransformer sel, bool extend)
+	{
+	        if (!extend)
+	                sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+
+	        var snapshot = sel.Selection.ActivePoint.Position.Snapshot;
+	        int pos = sel.Selection.ActivePoint.Position.Position;
+
+	        while (pos < snapshot.Length && !IsWordChar(snapshot[pos]))
+	        {
+	                sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                pos++;
+	        }
+	        while (pos + 1 < snapshot.Length && IsWordChar(snapshot[pos + 1]))
+	        {
+	                sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                pos++;
+	        }
+	}
+
+	private void MoveToNextBigWordEnd(ISelectionTransformer sel, bool extend)
+	{
+	        if (!extend)
+	                sel.PerformAction(PredefinedSelectionTransformations.ClearSelection);
+
+	        var snapshot = sel.Selection.ActivePoint.Position.Snapshot;
+	        int pos = sel.Selection.ActivePoint.Position.Position;
+
+	        while (pos < snapshot.Length && char.IsWhiteSpace(snapshot[pos]))
+	        {
+	                       sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                       pos++;
+	               }
+	               while (pos + 1 < snapshot.Length && !char.IsWhiteSpace(snapshot[pos + 1]))
+	               {
+	                       sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                       pos++;
+	               }
+	       }
+
+               internal void Reset()
+               {
 			_keymap.Reset();
 			_pendingCount = 0;
 			_pendingSurround = false;

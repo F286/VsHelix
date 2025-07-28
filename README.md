@@ -14,9 +14,10 @@ command handler and will grow into a small set of core commands.
    extension automatically loaded.
 4. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-5. Press `w` to extend each caret to the start of the next word.
-6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
-7. Carets display as thin vertical bars in both modes for a consistent insert-style look.
+5. Use `w` and `b` to move forward or backward by words. `e` jumps to the end of the current word.
+6. Use `W`, `B`, and `E` for WORD-wise motions that treat punctuation as part of the word.
+7. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
+8. Carets display as thin vertical bars in both modes for a consistent insert-style look.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it
@@ -38,9 +39,10 @@ or using `VSIXInstaller.exe`.
 - `VsHelix.csproj` – Project definition and SDK references.
 - `source.extension.vsixmanifest` – Extension manifest used by Visual Studio.
 
-The extension includes a `HelixCommandHandler` implementing basic motions like
-`w` for word forward as well as `h`, `j`, `k`, and `l` for left, down, up, and
-right movement across all selections.  The `x` key selects the current line
+The extension includes a `HelixCommandHandler` implementing word motions and
+the classic `h`, `j`, `k`, `l` keys for left, down, up, and right movement
+across all selections.  Use `w`, `b`, and `e` to move by words or to a word end.
+Their uppercase forms operate on whitespace‑delimited WORDs. The `x` key selects the current line
 including its trailing newline and extends to the next line when pressed
 repeatedly.  Pressing `C`
 copies the current selection to the line below while <kbd>Alt</kbd>+`C`

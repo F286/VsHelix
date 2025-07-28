@@ -79,11 +79,13 @@ namespace VsHelix
 						sel.MoveTo(target, true, PositionAffinity.Successor);
 					}
 				},
-				['w'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToNextSubWord),
-				['W'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToNextWord),
-				['b'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousSubWord),
-				['B'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord)
-			};
+                               ['w'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToNextWord),
+                               ['W'] = (view, sel) => MoveToNextBigWordStart(view, sel),
+                               ['b'] = (view, sel) => sel.PerformAction(PredefinedSelectionTransformations.SelectToPreviousWord),
+                               ['B'] = (view, sel) => MoveToPreviousBigWordStart(view, sel),
+                               ['e'] = (view, sel) => MoveToNextWordEnd(view, sel),
+                               ['E'] = (view, sel) => MoveToNextBigWordEnd(view, sel)
+                       };
 
 			foreach (var kvp in movementCommands)
 			{
@@ -286,8 +288,78 @@ namespace VsHelix
 			}
 		}
 
-		internal void Reset()
-		{
+	           private static void MoveToNextBigWordStart(ITextView view, ISelectionTransformer sel)
+	           {
+	                   var snapshot = view.TextSnapshot;
+	                   int pos = sel.Selection.ActivePoint.Position.Position;
+
+	                   while (pos < snapshot.Length && !char.IsWhiteSpace(snapshot[pos]))
+	                   {
+	                           sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                           pos++;
+	                   }
+	                   while (pos < snapshot.Length && char.IsWhiteSpace(snapshot[pos]))
+	                   {
+	                           sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                           pos++;
+	                   }
+	           }
+
+	           private static void MoveToPreviousBigWordStart(ITextView view, ISelectionTransformer sel)
+	           {
+	                   var snapshot = view.TextSnapshot;
+	                   int pos = sel.Selection.ActivePoint.Position.Position;
+
+	                   while (pos > 0 && char.IsWhiteSpace(snapshot[pos - 1]))
+	                   {
+	                           sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+	                           pos--;
+	                   }
+	                   while (pos > 0 && !char.IsWhiteSpace(snapshot[pos - 1]))
+	                   {
+	                           sel.PerformAction(PredefinedSelectionTransformations.MoveToPreviousCaretPosition);
+	                           pos--;
+	                   }
+	           }
+
+	           private static bool IsWordChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
+
+	           private static void MoveToNextWordEnd(ITextView view, ISelectionTransformer sel)
+	           {
+	                   var snapshot = view.TextSnapshot;
+	                   int pos = sel.Selection.ActivePoint.Position.Position;
+
+	                   while (pos < snapshot.Length && !IsWordChar(snapshot[pos]))
+	                   {
+	                           sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+	                           pos++;
+	                   }
+                       while (pos + 1 < snapshot.Length && IsWordChar(snapshot[pos + 1]))
+                       {
+                               sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+                               pos++;
+                       }
+               }
+
+               private static void MoveToNextBigWordEnd(ITextView view, ISelectionTransformer sel)
+               {
+                       var snapshot = view.TextSnapshot;
+                       int pos = sel.Selection.ActivePoint.Position.Position;
+
+                       while (pos < snapshot.Length && char.IsWhiteSpace(snapshot[pos]))
+                       {
+                               sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+                               pos++;
+                       }
+                       while (pos + 1 < snapshot.Length && !char.IsWhiteSpace(snapshot[pos + 1]))
+                       {
+                               sel.PerformAction(PredefinedSelectionTransformations.MoveToNextCaretPosition);
+                               pos++;
+                       }
+               }
+
+               internal void Reset()
+               {
 			_keymap.Reset();
 			_pendingCount = 0;
 		}
