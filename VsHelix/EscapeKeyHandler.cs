@@ -13,7 +13,8 @@ namespace VsHelix
 	[ContentType("text")]
 	[TextViewRole(PredefinedTextViewRoles.Editable)]
 	[Name(nameof(EscapeKeyHandler))]
-	[Order(Before = "TypeChar")]
+	// Run before the default Escape handler so we always regain Normal mode.
+	[Order(Before = "Escape")]
 	[VisualStudioContribution]
 	internal sealed class EscapeKeyHandler : ICommandHandler<EscapeKeyCommandArgs>
 	{
