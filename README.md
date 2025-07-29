@@ -17,7 +17,7 @@ You can always grab the latest nightly build from the
    extension automatically loaded.
 4. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-5. Use `w`, `b`, and `e` to move forward, backward, or to the end of a word.
+5. Use `w`, `b`, and `e` to select forward, backward, or to the end of a word.
    Uppercase `W`, `B`, and `E` operate on whitespace-delimited WORDs.
 6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
 7. Carets display as thin vertical bars in both modes for a consistent insert-style look.
@@ -47,7 +47,7 @@ or using `VSIXInstaller.exe`.
 
 VsHelix exposes a `HelixCommandHandler` with bindings inspired by the Helix editor:
 
-- **Movement** – `w`, `b`, `e` move by word while `h`, `j`, `k`, and `l` move left, down, up, and right.
+ - **Movement** – `w`, `b`, `e` select by word while `h`, `j`, `k`, and `l` move left, down, up, and right.
 - **Line operations** – `x` selects the current line; `C` and <kbd>Alt</kbd>+`C` copy the selection below or above.
 - **New lines** – `o` and `O` insert lines below or above the caret and enter insert mode.
 - **Clipboard** – `y` yanks, `p` pastes, and `d`/`c` delete while yanking (hold <kbd>Alt</kbd> to delete only).
