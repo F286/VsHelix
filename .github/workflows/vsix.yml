@@ -1,0 +1,59 @@
+name: Build and Release VSIX
+
+# Trigger the workflow on commits to the main development branch and when run manually.
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    # The workflow needs write access to the repository in order to create or update releases.
+    permissions:
+      contents: write
+    steps:
+      # Check out the repository code so that MSBuild can compile it.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up NuGet so that we can restore the Visual Studio SDK packages.
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v1
+
+      # Add MSBuild (and the Visual Studio Build Tools) to the PATH. This action installs
+      # the appropriate version of MSBuild on the GitHub hosted Windows runner.
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # Restore NuGet packages for the solution.  This step ensures that all
+      # dependencies referenced by the Visual Studio extension are available before
+      # compilation begins.
+      - name: Restore packages
+        run: nuget restore VsHelix.sln
+
+      # Build the solution in Release mode.  Setting DeployExtension=false prevents
+      # the build process from attempting to install the extension on the runner.
+      # ZipPackageCompressionLevel is set to normal to reduce the size of the VSIX
+      # without sacrificing portability.
+      - name: Build VSIX
+        run: msbuild VsHelix.sln \
+            /p:Configuration=Release \
+            /p:DeployExtension=false \
+            /p:ZipPackageCompressionLevel=normal
+
+      # Create or update a release named "Nightly" and attach the generated VSIX file.
+      # The release will always point to the latest commit on the default branch,
+      # making it a stable download target.  If the release already exists,
+      # existing assets are removed before uploading the new VSIX.
+      - name: Publish VSIX artifact to GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: nightly
+          name: Nightly Build
+          commit: ${{ github.sha }}
+          allowUpdates: true
+          makeLatest: true
+          removeArtifacts: true
+          artifacts: VsHelix/bin/Release/VsHelix.vsix
