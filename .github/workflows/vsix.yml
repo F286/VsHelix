@@ -57,4 +57,4 @@ jobs:
           allowUpdates: true
           makeLatest: true
           removeArtifacts: true
-          artifacts: VsHelix\\bin\\Release\\VsHelix.vsix
+     artifacts: "VsHelix/**/*.vsix"
