@@ -38,9 +38,10 @@ jobs:
       # ZipPackageCompressionLevel is set to normal to reduce the size of the VSIX
       # without sacrificing portability.
       - name: Build VSIX
-        run: msbuild VsHelix.sln \
-            /p:Configuration=Release \
-            /p:DeployExtension=false \
+        run: |
+          msbuild VsHelix.sln `
+            /p:Configuration=Release `
+            /p:DeployExtension=false `
             /p:ZipPackageCompressionLevel=normal
 
       # Create or update a release named "Nightly" and attach the generated VSIX file.
