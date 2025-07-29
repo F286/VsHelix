@@ -182,9 +182,156 @@ namespace VsHelix
 			{
 				Clipboard.SetDataObject(dataObject, true);
 			}
-			catch
-			{
+catch
+{
+}
+}
+
+private static bool IsWordChar(char ch) => char.IsLetterOrDigit(ch) || ch == '_';
+private static bool IsWhitespace(char ch) => char.IsWhiteSpace(ch);
+private static bool IsPunctuation(char ch) => !IsWordChar(ch) && !IsWhitespace(ch);
+
+		internal static void MoveToNextWordStart(ISelectionTransformer transformer, bool extend)
+		{
+		var snapshot = transformer.Selection.ActivePoint.Position.Snapshot;
+		int pos = transformer.Selection.ActivePoint.Position.Position;
+		if (pos < snapshot.Length)
+		{
+		char current = snapshot[pos];
+		if (IsWhitespace(current))
+		{
+		while (pos < snapshot.Length && IsWhitespace(snapshot[pos]))
+		{
+		pos++;
+		}
+		}
+		else if (IsWordChar(current))
+		{
+		while (pos < snapshot.Length && IsWordChar(snapshot[pos]))
+		{
+		pos++;
+		}
+		}
+		else
+		{
+		while (pos < snapshot.Length && IsPunctuation(snapshot[pos]))
+		{
+		pos++;
+		}
+		}
+		
+		while (pos < snapshot.Length && IsWhitespace(snapshot[pos]))
+		{
+		pos++;
+		}
+		}
+		
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
+		}
+		
+		internal static void MoveToPreviousWordStart(ISelectionTransformer transformer, bool extend)
+		{
+		var snapshot = transformer.Selection.ActivePoint.Position.Snapshot;
+				int pos = transformer.Selection.ActivePoint.Position.Position;
+		while (pos > 0 && IsWhitespace(snapshot[pos - 1]))
+		{
+		pos--;
+		}
+		if (pos > 0)
+		{
+		char prev = snapshot[pos - 1];
+		if (IsWordChar(prev))
+		{
+		while (pos > 0 && IsWordChar(snapshot[pos - 1]))
+		{
+		pos--;
+		}
+		}
+		else if (IsPunctuation(prev))
+		{
+		while (pos > 0 && IsPunctuation(snapshot[pos - 1]))
+		{
+		pos--;
+		}
+		}
+		else
+		{
+		while (pos > 0 && IsWhitespace(snapshot[pos - 1]))
+		{
+		pos--;
+		}
+		}
+		}
+		
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
+		}
+		
+		internal static void MoveToNextLongWordStart(ISelectionTransformer transformer, bool extend)
+		{
+		var snapshot = transformer.Selection.ActivePoint.Position.Snapshot;
+		int pos = transformer.Selection.ActivePoint.Position.Position;
+		while (pos < snapshot.Length && !IsWhitespace(snapshot[pos]))
+		pos++;
+		while (pos < snapshot.Length && IsWhitespace(snapshot[pos]))
+		pos++;
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
+		}
+		
+		internal static void MoveToPreviousLongWordStart(ISelectionTransformer transformer, bool extend)
+		{
+		var snapshot = transformer.Selection.ActivePoint.Position.Snapshot;
+		int pos = transformer.Selection.ActivePoint.Position.Position;
+		while (pos > 0 && IsWhitespace(snapshot[pos - 1]))
+		pos--;
+		while (pos > 0 && !IsWhitespace(snapshot[pos - 1]))
+		pos--;
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
+		}
+		
+		internal static void MoveToNextWordEnd(ISelectionTransformer transformer, bool extend)
+				{
+				var snapshot = transformer.Selection.ActivePoint.Position.Snapshot;
+				int pos = transformer.Selection.ActivePoint.Position.Position;
+				while (pos < snapshot.Length && IsWhitespace(snapshot[pos]))
+				pos++;
+				if (pos >= snapshot.Length)
+				{
+				transformer.MoveTo(new VirtualSnapshotPoint(snapshot, snapshot.Length), extend, PositionAffinity.Predecessor);
+				return;
+				}
+				bool word = IsWordChar(snapshot[pos]);
+				while (pos + 1 < snapshot.Length)
+				{
+		char next = snapshot[pos + 1];
+		if (word && IsWordChar(next))
+		{
+		pos++;
+		continue;
+		}
+		if (!word && IsPunctuation(next))
+		{
+		pos++;
+		continue;
+		}
+		break;
+		}
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
+		}
+		
+		internal static void MoveToNextLongWordEnd(ISelectionTransformer transformer, bool extend)
+		{
+		var snapshot = transformer.Selection.ActivePoint.Position.Snapshot;
+		int pos = transformer.Selection.ActivePoint.Position.Position;
+		while (pos < snapshot.Length && IsWhitespace(snapshot[pos]))
+		pos++;
+		if (pos >= snapshot.Length)
+		{
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, snapshot.Length), extend, PositionAffinity.Predecessor);
+		return;
+		}
+		while (pos + 1 < snapshot.Length && !IsWhitespace(snapshot[pos + 1]))
+		pos++;
+		transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
+		}
 			}
 		}
-	}
-}

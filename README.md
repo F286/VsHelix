@@ -14,7 +14,8 @@ command handler and will grow into a small set of core commands.
    extension automatically loaded.
 4. Open any text file in the experimental instance.  Use
    `Ctrl+Alt+Click` to place additional carets.
-5. Press `w` to extend each caret to the start of the next word.
+5. Use `w`, `b`, and `e` to move forward, backward, or to the end of a word.
+   Uppercase `W`, `B`, and `E` operate on whitespace-delimited WORDs.
 6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
 7. Carets display as thin vertical bars in both modes for a consistent insert-style look.
 
@@ -39,7 +40,7 @@ or using `VSIXInstaller.exe`.
 - `source.extension.vsixmanifest` – Extension manifest used by Visual Studio.
 
 The extension includes a `HelixCommandHandler` implementing basic motions like
-`w` for word forward as well as `h`, `j`, `k`, and `l` for left, down, up, and
+`w`, `b`, and `e` for word movement as well as `h`, `j`, `k`, and `l` for left, down, up, and
 right movement across all selections.  The `x` key selects the current line
 including its trailing newline and extends to the next line when pressed
 repeatedly.  Pressing `C`
