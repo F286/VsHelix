@@ -56,5 +56,5 @@ jobs:
           commit: ${{ github.sha }}
           allowUpdates: true
           makeLatest: true
-          removeArtifacts: true
-     artifacts: "VsHelix/**/*.vsix"
+          removeArtifacts:  "VsHelix/**/*.vsix"
+         
