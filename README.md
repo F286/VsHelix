@@ -80,3 +80,8 @@ and `gs` for the start, end, and first non-whitespace of the line. `gt`, `gc` an
 References and Implementation commands. `ga`/`gm` navigate backward or forward in
 file history, `gn`/`gp` switch between documents and `g.` returns to the last edit
 location. `gj` and `gk` move by textual lines.
+
+
+## Download
+
+You can download the latest VsHelix build from the [releases page](https://github.com/F286/VsHelix/releases/latest/download/VsHelix.vsix).
