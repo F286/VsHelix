@@ -16,6 +16,7 @@ namespace VsHelix
 		public void TextViewCreated(IWpfTextView textView)
 		{
 			textView.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);  // block caret
+			textView.Options.SetOptionValue(DefaultTextViewOptions.ReferenceHighlightingId, false);	// disable similar word highlighting
 		}
 	}
 }
