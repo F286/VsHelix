@@ -864,13 +864,14 @@ namespace VsHelix
 			}
 		}
 
-               private void SelectTextObject(char ch, bool around, ITextView view, IMultiSelectionBroker broker)
-               {
-                       if (ch == 'w' || ch == 'W')
-                       {
-                               bool longWord = ch == 'W';
-                               var snapshot = view.TextBuffer.CurrentSnapshot;
-                               var newSelections = new List<Selection>();
+              private void SelectTextObject(char ch, bool around, ITextView view, IMultiSelectionBroker broker)
+              {
+                      var snapshot = view.TextBuffer.CurrentSnapshot;
+
+                      if (ch == 'w' || ch == 'W')
+                      {
+                              bool longWord = ch == 'W';
+                              var newSelections = new List<Selection>();
                                foreach (var sel in broker.AllSelections)
                                {
                                        int caretPos = sel.IsReversed ? sel.Start.Position.Position : sel.End.Position.Position;
@@ -893,8 +894,7 @@ namespace VsHelix
                        if (!TryGetBracket(ch, out var open, out var close))
                                return;
 
-                       var snapshot = view.TextBuffer.CurrentSnapshot;
-                       var newSel = new List<Selection>();
+                      var newSel = new List<Selection>();
                        foreach (var sel in broker.AllSelections)
                        {
                                bool found = false;
