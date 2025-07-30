@@ -159,12 +159,12 @@ namespace VsHelix
 
 
 				// Word-wise movements (clear selection then extend)
-				['w'] = sel => SelectionUtils.MoveToNextWordStart(sel, true),  // Next word
-				['W'] = sel => SelectionUtils.MoveToNextLongWordStart(sel, true),  // Next WORD
-				['b'] = sel => SelectionUtils.MoveToPreviousWordStart(sel, true),  // Previous word
-				['B'] = sel => SelectionUtils.MoveToPreviousLongWordStart(sel, true),  // Previous WORD
-				['e'] = sel => SelectionUtils.MoveToNextWordEnd(sel, true),  // End of word
-				['E'] = sel => SelectionUtils.MoveToNextLongWordEnd(sel, true)   // End of WORD
+				['w'] = sel => { sel.PerformAction(PredefinedSelectionTransformations.ClearSelection); SelectionUtils.MoveToNextWordStart(sel, true); },  // Next word
+				['W'] = sel => { sel.PerformAction(PredefinedSelectionTransformations.ClearSelection); SelectionUtils.MoveToNextLongWordStart(sel, true); },  // Next WORD
+				['b'] = sel => { sel.PerformAction(PredefinedSelectionTransformations.ClearSelection); SelectionUtils.MoveToPreviousWordStart(sel, true); },  // Previous word
+				['B'] = sel => { sel.PerformAction(PredefinedSelectionTransformations.ClearSelection); SelectionUtils.MoveToPreviousLongWordStart(sel, true); },  // Previous WORD
+				['e'] = sel => { sel.PerformAction(PredefinedSelectionTransformations.ClearSelection); SelectionUtils.MoveToNextWordEnd(sel, true); },  // End of word
+				['E'] = sel => { sel.PerformAction(PredefinedSelectionTransformations.ClearSelection); SelectionUtils.MoveToNextLongWordEnd(sel, true); }   // End of WORD
 			};
 
 			// Register all movement commands to the command map.
