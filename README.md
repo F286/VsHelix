@@ -21,7 +21,7 @@ You can always grab the latest nightly build from the
    Uppercase `W`, `B`, and `E` operate on whitespace-delimited WORDs.
 6. Use `h`, `j`, `k`, and `l` to move all carets left, down, up, or right by one character or line.
 7. Carets display as thin vertical bars in both modes for a consistent insert-style look.
-8. Reference highlighting is disabled in Normal mode so only the actual selection is shown.
+8. Reference highlighting is disabled in Normal and Visual modes so only the actual selection is shown.
 
 The provided `VsHelixPackage` is a standard AsyncPackage.  Command handlers are
 added via MEF exports.  When the project is built in *Release* configuration it

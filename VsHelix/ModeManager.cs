@@ -43,6 +43,7 @@ namespace VsHelix
 			Current = EditorMode.Insert;
 			StatusBarHelper.ShowMode(Current);
 			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, false);
+			view.Options.SetOptionValue(DefaultTextViewOptions.ShowSelectionMatchesId, true);
 		}
 
 		public void EnterVisual(ITextView view, IMultiSelectionBroker broker)
@@ -50,6 +51,7 @@ namespace VsHelix
 			Current = EditorMode.Visual;
 			StatusBarHelper.ShowMode(Current);
 			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);
+			view.Options.SetOptionValue(DefaultTextViewOptions.ShowSelectionMatchesId, false);
 		}
 
 		public void EnterSearch(ITextView view, IMultiSelectionBroker broker, bool selectAll, System.Collections.Generic.List<SnapshotSpan> domain)
@@ -73,6 +75,7 @@ namespace VsHelix
 			_searchMode = null;
 			StatusBarHelper.ShowMode(Current);
 			view.Options.SetOptionValue(DefaultTextViewOptions.OverwriteModeId, true);  // block caret
+			view.Options.SetOptionValue(DefaultTextViewOptions.ShowSelectionMatchesId, false);
 
 		}
 	}
