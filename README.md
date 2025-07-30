@@ -54,6 +54,7 @@ VsHelix exposes a `HelixCommandHandler` with bindings inspired by the Helix edit
 - **Selections** – `,` clears secondary selections and `v` toggles Visual mode for selection growth.
 - **Search** – `s` selects regex matches and `/` performs an incremental search navigated with `n`/`N`.
 - **Pairs** – `m` commands jump to, surround, or modify matching brackets and quotes.
+- **Text objects** – `miw`/`maw` select the word under the caret. Use uppercase `W` for whitespace-delimited WORDs.
 - **Misc** – `u`/`U` undo and redo, numeric prefixes repeat commands, and <kbd>Esc</kbd> exits to Normal mode.
 - **Goto mode** – `g` followed by another key jumps to lines, files, or definitions.
 ## Download
