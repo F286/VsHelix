@@ -333,5 +333,54 @@ namespace VsHelix
 				pos++;
 			transformer.MoveTo(new VirtualSnapshotPoint(snapshot, pos), extend, PositionAffinity.Successor);
 		}
+		/// <summary>
+		/// Calculates the boundaries of a word or WORD at the specified position.
+		/// </summary>
+		internal static void GetWordExtent(ITextSnapshot snapshot, int position, bool longWord, out int start, out int end)
+		{
+			start = end = position;
+			if (position < 0 || position >= snapshot.Length)
+				return;
+
+			while (position < snapshot.Length && IsWhitespace(snapshot[position]))
+				position++;
+			if (position >= snapshot.Length)
+				return;
+
+			bool isWord = longWord ? !IsWhitespace(snapshot[position]) : IsWordChar(snapshot[position]);
+
+			start = position;
+			end = position + 1;
+
+			while (start > 0)
+			{
+				char prev = snapshot[start - 1];
+				bool match = longWord ? !IsWhitespace(prev) : (isWord ? IsWordChar(prev) : IsPunctuation(prev));
+				if (!match)
+					break;
+				start--;
+			}
+
+			while (end < snapshot.Length)
+			{
+				char next = snapshot[end];
+				bool match = longWord ? !IsWhitespace(next) : (isWord ? IsWordChar(next) : IsPunctuation(next));
+				if (!match)
+					break;
+				end++;
+			}
+		}
+
+		/// <summary>
+		/// Expands a span to include neighbouring whitespace.
+		/// </summary>
+		internal static void ExpandToWhitespace(ITextSnapshot snapshot, ref int start, ref int end)
+		{
+			while (start > 0 && IsWhitespace(snapshot[start - 1]))
+				start--;
+			while (end < snapshot.Length && IsWhitespace(snapshot[end]))
+				end++;
+		}
+
 	}
 }

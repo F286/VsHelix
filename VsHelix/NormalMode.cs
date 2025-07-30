@@ -864,40 +864,64 @@ namespace VsHelix
 			}
 		}
 
-		private void SelectTextObject(char ch, bool around, ITextView view, IMultiSelectionBroker broker)
-		{
-			if (!TryGetBracket(ch, out var open, out var close))
-				return;
+               private void SelectTextObject(char ch, bool around, ITextView view, IMultiSelectionBroker broker)
+               {
+                       if (ch == 'w' || ch == 'W')
+                       {
+                               bool longWord = ch == 'W';
+                               var snapshot = view.TextBuffer.CurrentSnapshot;
+                               var newSelections = new List<Selection>();
+                               foreach (var sel in broker.AllSelections)
+                               {
+                                       int caretPos = sel.IsReversed ? sel.Start.Position.Position : sel.End.Position.Position;
+                                       SelectionUtils.GetWordExtent(snapshot, caretPos, longWord, out int start, out int end);
+                                       if (start == end)
+                                       {
+                                               newSelections.Add(sel);
+                                               continue;
+                                       }
+                                       if (around)
+                                               SelectionUtils.ExpandToWhitespace(snapshot, ref start, ref end);
+                                       var startPt = new VirtualSnapshotPoint(snapshot, start);
+                                       var endPt = new VirtualSnapshotPoint(snapshot, end);
+                                       newSelections.Add(new Selection(new VirtualSnapshotSpan(startPt, endPt), sel.IsReversed));
+                               }
+                               ApplySelections(newSelections, view, broker);
+                               return;
+                       }
 
-			var snapshot = view.TextBuffer.CurrentSnapshot;
-			var newSelections = new List<Selection>();
-			foreach (var sel in broker.AllSelections)
-			{
-				bool found = false;
-				for (int p = sel.Start.Position - 1; p >= 0; p--)
-				{
-					if (snapshot[p] == open)
-					{
-						int match = FindMatch(snapshot, p, open, close, 1, 0);
-						if (match >= 0 && match >= sel.End.Position)
-						{
-							int startPos = around ? p : p + 1;
-							int endPos = around ? match + 1 : match;
-							var start = new VirtualSnapshotPoint(snapshot, startPos);
-							var end = new VirtualSnapshotPoint(snapshot, endPos);
-							newSelections.Add(new Selection(new VirtualSnapshotSpan(start, end), sel.IsReversed));
-							found = true;
-							break;
-						}
-					}
-				}
-				if (!found)
-				{
-					newSelections.Add(sel);
-				}
-			}
-			ApplySelections(newSelections, view, broker);
-		}
+                       if (!TryGetBracket(ch, out var open, out var close))
+                               return;
+
+                       var snapshot = view.TextBuffer.CurrentSnapshot;
+                       var newSel = new List<Selection>();
+                       foreach (var sel in broker.AllSelections)
+                       {
+                               bool found = false;
+                               for (int p = sel.Start.Position - 1; p >= 0; p--)
+                               {
+                                       if (snapshot[p] == open)
+                                       {
+                                               int match = FindMatch(snapshot, p, open, close, 1, 0);
+                                               if (match >= 0 && match >= sel.End.Position)
+                                               {
+                                                       int startPos = around ? p : p + 1;
+                                                       int endPos = around ? match + 1 : match;
+                                                       var start = new VirtualSnapshotPoint(snapshot, startPos);
+                                                       var end = new VirtualSnapshotPoint(snapshot, endPos);
+                                                       newSel.Add(new Selection(new VirtualSnapshotSpan(start, end), sel.IsReversed));
+                                                       found = true;
+                                                       break;
+                                               }
+                                       }
+                               }
+                               if (!found)
+                               {
+                                       newSel.Add(sel);
+                               }
+                       }
+                       ApplySelections(newSel, view, broker);
+               }
 
 		private void ApplySelections(IReadOnlyList<Selection> selections, ITextView view, IMultiSelectionBroker broker)
 		{
