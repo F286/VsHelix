@@ -79,13 +79,13 @@ namespace VsHelix
 						sel.MoveTo(target, true, PositionAffinity.Successor);
 					}
 				},
-                               ['w'] = (view, sel) => SelectionUtils.MoveToNextWordStart(sel, true),
-                               ['W'] = (view, sel) => SelectionUtils.MoveToNextLongWordStart(sel, true),
-                               ['b'] = (view, sel) => SelectionUtils.MoveToPreviousWordStart(sel, true),
-                               ['B'] = (view, sel) => SelectionUtils.MoveToPreviousLongWordStart(sel, true),
-                               ['e'] = (view, sel) => SelectionUtils.MoveToNextWordEnd(sel, true),
-                               ['E'] = (view, sel) => SelectionUtils.MoveToNextLongWordEnd(sel, true)
-                       };
+				['w'] = (view, sel) => SelectionUtils.MoveToNextWordStart(sel, true),
+				['W'] = (view, sel) => SelectionUtils.MoveToNextLongWordStart(sel, true),
+				['b'] = (view, sel) => SelectionUtils.MoveToPreviousWordStart(sel, true),
+				['B'] = (view, sel) => SelectionUtils.MoveToPreviousLongWordStart(sel, true),
+				['e'] = (view, sel) => SelectionUtils.MoveToNextWordEnd(sel, true),
+				['E'] = (view, sel) => SelectionUtils.MoveToNextLongWordEnd(sel, true)
+			};
 
 			foreach (var kvp in movementCommands)
 			{
